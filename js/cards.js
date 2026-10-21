@@ -180,6 +180,9 @@ function renderCardSVG(card, isBack = false) {
         <!-- 하단 복 문구 -->
         <rect x="15" y="${cardH - 30}" width="${cardW - 30}" height="18" rx="9" fill="#991b1b"/>
         <text x="${cardW / 2}" y="${cardH - 17}" font-family="'Batang', serif" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">福 (${is3Pi ? '삼피' : '쌍피'})</text>
+        
+        <!-- 균일한 약 1.5px 정통 레드 테두리 적용 -->
+        <rect x="0.75" y="0.75" width="${cardW - 1.5}" height="${cardH - 1.5}" rx="${rx}" fill="none" stroke="#d62828" stroke-width="1.5"/>
       </svg>
     `;
   }
@@ -208,6 +211,9 @@ function renderCardSVG(card, isBack = false) {
       <g clip-path="url(#cardClip_${card.id})">
         <image href="./assets/hwatu_deck.svg" x="-${offsetX}" y="-${offsetY}" width="1326" height="732" preserveAspectRatio="none"/>
       </g>
+
+      <!-- 모든 48장 패에 균일하고 적당한 약 1.5px 정통 레드 테두리 적용 -->
+      <rect x="0.75" y="0.75" width="${cardW - 1.5}" height="${cardH - 1.5}" rx="${rx}" fill="none" stroke="#d62828" stroke-width="1.5" />
 
       <!-- 모바일 가시성을 위한 상단 인덱스 태그 뱃지 -->
       ${badge}
