@@ -17,10 +17,17 @@ class GoStopApp {
     this.gameSpeed = parseInt(localStorage.getItem('gostop_speed') || '1', 10);
     if (![1, 2, 3].includes(this.gameSpeed)) this.gameSpeed = 1;
 
+    // 1점당 판돈 (기본 1,000원, 2천원, 5천원, 1만원, 5만원, 10만원)
+    this.currentStake = parseInt(localStorage.getItem('gostop_stake') || '1000', 10);
+    if (![1000, 2000, 5000, 10000, 50000, 100000].includes(this.currentStake)) this.currentStake = 1000;
+
     // DOM 캐시
     this.dom = {
       app: document.getElementById('game-app'),
       turnIndicator: document.getElementById('turn-indicator'),
+      btnStake: document.getElementById('btn-stake'),
+      stakeMenu: document.getElementById('stake-menu'),
+      stakeItems: document.querySelectorAll('.stake-item'),
       btnSpeed: document.getElementById('btn-speed'),
       btnFullscreen: document.getElementById('btn-fullscreen'),
       btnSound: document.getElementById('btn-sound'),
@@ -154,6 +161,9 @@ class GoStopApp {
 
   // UI 이벤트 바인딩
   bindEvents() {
+    // 0. 점당 판돈 선택 드롭다운 (1,000원 ~ 100,000원)
+    this.initStakeSelector();
+
     // 1. 진행 속도 토글 (1x -> 2x -> 3x -> 1x)
     if (this.dom.btnSpeed) {
       this.updateSpeedButton();
@@ -236,6 +246,76 @@ class GoStopApp {
     }
   }
 
+  // 점당 판돈 선택기 초기화 및 이벤트 등록
+  initStakeSelector() {
+    if (!this.dom.btnStake || !this.dom.stakeMenu) return;
+
+    this.applyStake(this.currentStake, false);
+
+    // 버튼 클릭 시 드롭다운 토글
+    this.dom.btnStake.addEventListener('click', (e) => {
+      e.stopPropagation();
+      this.dom.stakeMenu.classList.toggle('hidden');
+    });
+
+    // 옵션 클릭 시 판돈 변경
+    if (this.dom.stakeItems) {
+      this.dom.stakeItems.forEach((item) => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const stake = parseInt(item.dataset.stake, 10);
+          this.applyStake(stake, true);
+          this.dom.stakeMenu.classList.add('hidden');
+        });
+      });
+    }
+
+    // 외부 영역 클릭 시 드롭다운 닫기
+    document.addEventListener('click', (e) => {
+      if (this.dom.stakeMenu && !this.dom.stakeMenu.classList.contains('hidden')) {
+        if (!e.target.closest('.stake-dropdown-wrap')) {
+          this.dom.stakeMenu.classList.add('hidden');
+        }
+      }
+    });
+  }
+
+  // 판돈 적용 및 UI 갱신
+  applyStake(stake, notify = false) {
+    this.currentStake = this.engine.setStakePerPoint(stake);
+    localStorage.setItem('gostop_stake', this.currentStake.toString());
+
+    const label = this.getStakeLabel(this.currentStake);
+    if (this.dom.btnStake) {
+      this.dom.btnStake.textContent = `💰 점당: ${label} ▾`;
+    }
+
+    if (this.dom.stakeItems) {
+      this.dom.stakeItems.forEach((item) => {
+        const val = parseInt(item.dataset.stake, 10);
+        if (val === this.currentStake) {
+          item.classList.add('active');
+        } else {
+          item.classList.remove('active');
+        }
+      });
+    }
+
+    if (notify) {
+      this.sound.playCardSnap();
+      this.showBanner(`💰 1점당 ${label} 설정 완료`, 1000);
+    }
+  }
+
+  // 금액 라벨 포맷 (1000 -> 1천원, 10000 -> 1만원, 100000 -> 10만원)
+  getStakeLabel(stake) {
+    if (stake >= 10000) {
+      return (stake / 10000) + '만원';
+    } else {
+      return (stake / 1000) + '천원';
+    }
+  }
+
   updateSpeedButton() {
     if (this.dom.btnSpeed) {
       this.dom.btnSpeed.textContent = `⚡ 속도 ${this.gameSpeed}x`;
@@ -257,6 +337,7 @@ class GoStopApp {
     this.selectedHandCard = null;
     this.isProcessingTurn = false;
     const initRes = this.engine.initGame();
+    this.engine.setStakePerPoint(this.currentStake);
 
     // 총통 체크
     if (initRes.fieldChongtong) {

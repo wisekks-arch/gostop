@@ -15,6 +15,17 @@ class GoStopEngine {
     this.firstTurn = true;
     this.bombFreeTurns = { player: 0, opponent: 0 }; // 폭탄 후 덱만 뒤집는 프리턴
     this.ppeokOwners = {}; // 월별 뻑 발생자 기록 { [month]: 'player' | 'opponent' }
+    this.stakePerPoint = 1000; // 1점당 기본 판돈 (1000원)
+  }
+
+  // 1점당 판돈 설정
+  setStakePerPoint(amount) {
+    const validStakes = [1000, 2000, 5000, 10000, 50000, 100000];
+    const parsed = parseInt(amount, 10);
+    if (validStakes.includes(parsed)) {
+      this.stakePerPoint = parsed;
+    }
+    return this.stakePerPoint;
   }
 
   // 플레이어 인스턴스 팩토리
@@ -627,12 +638,21 @@ class GoStopEngine {
       finalScore *= 2;
     }
 
-    // 판돈 계산 (점당 1,000원)
-    const stakePerPoint = 1000;
+    // 판돈 계산 (선택한 점당 금액 반영: 1천원 ~ 10만원)
+    const stakePerPoint = this.stakePerPoint || 1000;
     const totalWonMoney = finalScore * stakePerPoint;
 
     winner.money += totalWonMoney;
     loser.money = Math.max(0, loser.money - totalWonMoney);
+
+    // 파산 시 자동 무료 충전 (최소 50만 원 또는 판돈의 100배)
+    const refillAmount = Math.max(500000, stakePerPoint * 100);
+    if (this.player.money < stakePerPoint) {
+      this.player.money = refillAmount;
+    }
+    if (this.opponent.money < stakePerPoint) {
+      this.opponent.money = refillAmount;
+    }
 
     this.roundOver = true;
     this.winner = winnerSide;

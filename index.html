@@ -33,6 +33,18 @@
           턴</span>
       </div>
       <div class="util-buttons">
+        <div class="stake-dropdown-wrap">
+          <button id="btn-stake" class="btn-icon" style="color: #facc15; font-weight: 500;"
+            title="1점당 판돈 선택 (1천원 ~ 10만원)">💰 점당: 1천원 ▾</button>
+          <div id="stake-menu" class="stake-menu hidden">
+            <button class="stake-item active" data-stake="1000">1점 1,000원</button>
+            <button class="stake-item" data-stake="2000">1점 2,000원</button>
+            <button class="stake-item" data-stake="5000">1점 5,000원</button>
+            <button class="stake-item" data-stake="10000">1점 1만원</button>
+            <button class="stake-item" data-stake="50000">1점 5만원</button>
+            <button class="stake-item" data-stake="100000">1점 10만원</button>
+          </div>
+        </div>
         <button id="btn-speed" class="btn-icon" style="color: #ffd166; font-weight: 500;"
           title="게임 진행 속도 변경 (1x, 2x, 3x)">⚡ 속도 1x</button>
         <button id="btn-kookjin-toggle" class="btn-icon" title="국진 열끗을 쌍피로 전환">🌸 국진: 열끗</button>
