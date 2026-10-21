@@ -21,7 +21,7 @@ class GoStopApp {
     this.currentStake = parseInt(localStorage.getItem('gostop_stake') || '1000', 10);
     if (![1000, 2000, 5000, 10000, 50000, 100000].includes(this.currentStake)) this.currentStake = 1000;
 
-    this.isGameActive = false; // 게임 진행 중 여부 (게임 중에는 판돈 변경 불가)
+    this.hasPlayedFirstCard = false; // 첫 장을 쳤는지 여부 (첫 장을 치기 전까지만 판돈 변경 가능)
 
     // DOM 캐시
     this.dom = {
@@ -255,10 +255,10 @@ class GoStopApp {
 
     // 풀다운 변경 이벤트
     this.dom.selectPointStake.addEventListener('change', () => {
-      // 게임 진행 중에는 변경 불가!
-      if (this.isGameActive) {
+      // 같은 판에서 첫 장을 한 장이라도 친 후에는 변경 불가!
+      if (this.hasPlayedFirstCard) {
         this.dom.selectPointStake.value = this.currentStake.toString();
-        this.showBanner('⚠️ 게임 진행 중에는 판돈을 변경할 수 없습니다! (새 게임 시작 전 변경 가능)', 1600);
+        this.showBanner('⚠️ 이미 첫 장을 쳐서 게임이 진행 중이므로 판돈을 변경할 수 없습니다!', 1600);
         return;
       }
 
@@ -322,8 +322,8 @@ class GoStopApp {
   startNewGame() {
     this.selectedHandCard = null;
     this.isProcessingTurn = false;
-    this.isGameActive = true;
-    this.updateStakeSelectorDisabled(true); // 게임 진행 중 판돈 변경 잠금
+    this.hasPlayedFirstCard = false; // 첫 장을 치기 전까지는 점당 설정 변경 가능!
+    this.updateStakeSelectorDisabled(false); // 판돈 선택 풀다운 활성화
 
     const initRes = this.engine.initGame();
     this.engine.setStakePerPoint(this.currentStake);
@@ -774,6 +774,13 @@ class GoStopApp {
   // 플레이어 턴 실행 (사용자가 직접 선택한 바닥패 preChosenFieldCard 지원)
   async executePlayerTurn(card, preChosenFieldCard = null) {
     this.isProcessingTurn = true;
+
+    // 같은 판에서 첫 장을 내는 순간 즉시 점당 판돈 변경 잠금!
+    if (!this.hasPlayedFirstCard) {
+      this.hasPlayedFirstCard = true;
+      this.updateStakeSelectorDisabled(true);
+    }
+
     this.render();
 
     // 폭탄 가능 여부 확인
@@ -942,6 +949,13 @@ class GoStopApp {
   // 컴퓨터 AI 턴 자동 실행
   async executeAITurn() {
     this.isProcessingTurn = true;
+
+    // AI가 첫 장을 내는 순간 즉시 점당 판돈 변경 잠금!
+    if (!this.hasPlayedFirstCard) {
+      this.hasPlayedFirstCard = true;
+      this.updateStakeSelectorDisabled(true);
+    }
+
     this.render();
 
     const decision = this.ai.decideHandCard(this.engine.opponent);
@@ -1036,8 +1050,8 @@ class GoStopApp {
 
   // 라운드 종료 및 정산 모달
   handleRoundEnd(winnerSide, isStop) {
-    this.isGameActive = false;
-    this.updateStakeSelectorDisabled(false); // 판 종료: 새 판 시작 전 판돈 변경 잠금 해제
+    this.hasPlayedFirstCard = false;
+    this.updateStakeSelectorDisabled(false); // 판 종료: 다음 판 첫 장 치기 전까지 판돈 변경 잠금 해제
 
     const result = this.engine.finalizeWinner(winnerSide, isStop);
     const isPlayerWin = winnerSide === 'player';
@@ -1076,8 +1090,8 @@ class GoStopApp {
 
   // 덱이나 패가 다 떨어져 무승부 처리
   handleDrawOrFinalScore() {
-    this.isGameActive = false;
-    this.updateStakeSelectorDisabled(false); // 판 종료: 새 판 시작 전 판돈 변경 잠금 해제
+    this.hasPlayedFirstCard = false;
+    this.updateStakeSelectorDisabled(false); // 판 종료: 다음 판 첫 장 치기 전까지 판돈 변경 잠금 해제
 
     const pScore = this.engine.calculateScore(this.engine.player).total;
     const oppScore = this.engine.calculateScore(this.engine.opponent).total;
