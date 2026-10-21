@@ -208,11 +208,10 @@ class GoStopEngine {
         playedCards.push(handCard);
       }
 
-      // [정통 맞고 룰] 보너스패를 손에서 낸 경우:
-      // 즉시 피로 획득하고 상대 피 1장 강탈 후, 덱에서 손패 1장 즉시 보충 (바닥패 짝수 유지 및 손패 유지)
+      // [정통 맞고 룰] 내가 들고 있는 보너스 쌍피를 손에서 낸 경우:
+      // 상대방 피는 강탈하지 않고, 내 획득 피에 추가 등록 후 중앙 덱에서 손패 1장을 즉시 보충받음
       if (handCard.type === CARD_TYPE.BONUS) {
         this.addCapturedCard(player, handCard);
-        const stolen = this.stealPi(player);
         let replenishmentCard = null;
         if (this.deck.length > 0) {
           replenishmentCard = this.deck.pop();
@@ -223,7 +222,7 @@ class GoStopEngine {
           step: 'bonusHandReplenish',
           card: handCard,
           replenishmentCard,
-          stolen,
+          stolen: null,
           needAnotherHandPlay: true
         };
       }

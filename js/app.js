@@ -487,10 +487,9 @@ class GoStopApp {
       this.showBanner('💣 폭탄 투하!', 1200);
       await this.sleep(700);
     } else if (handResult.step === 'bonusHandReplenish') {
-      // [정통 맞고 룰] 손패에서 보너스 쌍피 냈을 때: 즉시 피로 가고 상대 피 1장 강탈 + 덱에서 손패 1장 보충
-      this.sound.playSpecial();
-      const stolenMsg = handResult.stolen ? ' (상대 피 1장 강탈!)' : '';
-      this.showBanner(`✨ 보너스 쌍피 출격!${stolenMsg} 덱에서 1장 보충`, 1400);
+      // [정통 맞고 룰] 내가 들고 있는 보너스 쌍피 냈을 때: 내 피에 등록(피 강탈 없음) + 덱에서 손패 1장 보충
+      this.sound.playCardSnap();
+      this.showBanner('✨ 보너스 쌍피 등록! 덱에서 손패 1장 보충', 1400);
       this.render();
       await this.sleep(Math.max(180, Math.round(550 / (this.gameSpeed || 1))));
       // 덱에서 보충받아 손패가 복구되었으므로 바닥패 짝수 유지를 위해 계속해서 손패 1장을 더 내도록 대기
@@ -653,10 +652,9 @@ class GoStopApp {
       this.showBanner('💣 AI의 폭탄 투하!', 1200);
       await this.sleep(700);
     } else if (handResult.step === 'bonusHandReplenish') {
-      // [정통 맞고 룰] AI가 손패에서 보너스 쌍피 냈을 때: 즉시 피로 가고 플레이어 피 1장 강탈 + 덱에서 손패 1장 보충
-      this.sound.playSpecial();
-      const stolenMsg = handResult.stolen ? ' (플레이어 피 1장 강탈!)' : '';
-      this.showBanner(`🤖 AI가 보너스 쌍피를 냈습니다!${stolenMsg} 덱에서 보충`, 1400);
+      // [정통 맞고 룰] AI가 들고 있는 보너스 쌍피 냈을 때: 피 등록(피 강탈 없음) + 덱에서 손패 1장 보충
+      this.sound.playCardSnap();
+      this.showBanner('🤖 AI가 보너스 쌍피를 등록하고 덱에서 1장 보충받았습니다.', 1400);
       this.render();
       await this.sleep(Math.max(180, Math.round(550 / (this.gameSpeed || 1))));
       // 덱에서 보충받아 손패가 복구되었으므로 바닥패 짝수 유지를 위해 남은 손패를 이어서 내도록 재호출
