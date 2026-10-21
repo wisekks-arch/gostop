@@ -13,10 +13,15 @@ class GoStopApp {
     this.isProcessingTurn = false;
     this.pendingChoiceResolver = null;
 
+    // 게임 진행 속도 (1x, 2x, 3x)
+    this.gameSpeed = parseInt(localStorage.getItem('gostop_speed') || '1', 10);
+    if (![1, 2, 3].includes(this.gameSpeed)) this.gameSpeed = 1;
+
     // DOM 캐시
     this.dom = {
       app: document.getElementById('game-app'),
       turnIndicator: document.getElementById('turn-indicator'),
+      btnSpeed: document.getElementById('btn-speed'),
       btnFullscreen: document.getElementById('btn-fullscreen'),
       btnSound: document.getElementById('btn-sound'),
       btnKookjin: document.getElementById('btn-kookjin-toggle'),
@@ -105,7 +110,19 @@ class GoStopApp {
 
   // UI 이벤트 바인딩
   bindEvents() {
-    // 1. 전체화면 토글
+    // 1. 진행 속도 토글 (1x -> 2x -> 3x -> 1x)
+    if (this.dom.btnSpeed) {
+      this.updateSpeedButton();
+      this.dom.btnSpeed.addEventListener('click', () => {
+        this.gameSpeed = this.gameSpeed === 1 ? 2 : (this.gameSpeed === 2 ? 3 : 1);
+        localStorage.setItem('gostop_speed', this.gameSpeed.toString());
+        this.updateSpeedButton();
+        this.sound.playCardSnap();
+        this.showBanner(`⚡ 게임 속도: ${this.gameSpeed}x 배속`, 900);
+      });
+    }
+
+    // 2. 전체화면 토글
     this.dom.btnFullscreen.addEventListener('click', () => {
       if (!document.fullscreenElement) {
         document.documentElement.requestFullscreen().catch(() => { });
@@ -116,13 +133,13 @@ class GoStopApp {
       }
     });
 
-    // 2. 사운드 토글
+    // 3. 사운드 토글
     this.dom.btnSound.addEventListener('click', () => {
       const isMuted = this.sound.toggleMute();
       this.dom.btnSound.textContent = isMuted ? '🔇 음소거' : '🔊 소리 켬';
     });
 
-    // 3. 국진 쌍피/열 전환 토글
+    // 4. 국진 쌍피/열 전환 토글
     this.dom.btnKookjin.addEventListener('click', () => {
       const res = this.engine.toggleKookjin(this.engine.player);
       this.sound.playCardSnap();
@@ -130,18 +147,34 @@ class GoStopApp {
       this.render();
     });
 
-    // 4. 재시작
+    // 5. 재시작
     this.dom.btnRestart.addEventListener('click', () => {
       if (confirm('게임을 새로 시작하시겠습니까?')) {
         this.startNewGame();
       }
     });
 
-    // 5. 다음 판 시작 버튼
+    // 6. 다음 판 시작 버튼
     this.dom.btnNextRound.addEventListener('click', () => {
       this.dom.modalResult.classList.remove('active');
       this.startNewGame();
     });
+  }
+
+  updateSpeedButton() {
+    if (this.dom.btnSpeed) {
+      this.dom.btnSpeed.textContent = `⚡ 속도 ${this.gameSpeed}x`;
+      if (this.gameSpeed === 3) {
+        this.dom.btnSpeed.style.color = '#ef4444';
+        this.dom.btnSpeed.style.borderColor = '#ef4444';
+      } else if (this.gameSpeed === 2) {
+        this.dom.btnSpeed.style.color = '#ffd166';
+        this.dom.btnSpeed.style.borderColor = '#ffd166';
+      } else {
+        this.dom.btnSpeed.style.color = '#93c5fd';
+        this.dom.btnSpeed.style.borderColor = 'rgba(255,255,255,0.2)';
+      }
+    }
   }
 
   // 새 판 시작
@@ -397,11 +430,11 @@ class GoStopApp {
 
     if (isBomb) {
       this.sound.playBomb();
-      this.showBanner('💣 폭탄 투하!', 1400);
-      await this.sleep(1000);
+      this.showBanner('💣 폭탄 투하!', 1200);
+      await this.sleep(700);
     }
 
-    await this.sleep(400);
+    await this.sleep(180);
 
     // 2단계: 중앙 덱에서 1장 드로우
     await this.processDeckPhase(this.engine.player, handResult);
@@ -428,23 +461,23 @@ class GoStopApp {
     // 특수 판정 사운드 및 이펙트 배너 노출
     if (turnResult.isPpeok) {
       this.sound.playPpeok();
-      this.showBanner('💩 뻑!', 1200);
-      await this.sleep(1000);
+      this.showBanner('💩 뻑!', 1000);
+      await this.sleep(600);
     } else {
       if (turnResult.isTtadak) {
         this.sound.playSpecial();
-        this.showBanner('⚡ 따닥! (피 1장 강탈)', 1400);
-        await this.sleep(1000);
+        this.showBanner('⚡ 따닥! (피 1장 강탈)', 1100);
+        await this.sleep(700);
       }
       if (turnResult.isJjok) {
         this.sound.playSpecial();
-        this.showBanner('💋 쪽! (피 1장 강탈)', 1400);
-        await this.sleep(1000);
+        this.showBanner('💋 쪽! (피 1장 강탈)', 1100);
+        await this.sleep(700);
       }
       if (turnResult.isSseul) {
         this.sound.playSpecial();
-        this.showBanner('🧹 판쓸이! (피 1장 강탈)', 1400);
-        await this.sleep(1000);
+        this.showBanner('🧹 판쓸이! (피 1장 강탈)', 1100);
+        await this.sleep(700);
       }
       if (turnResult.deckMatchedFieldCards && turnResult.deckMatchedFieldCards.length > 0) {
         this.sound.playMatch();
@@ -452,7 +485,7 @@ class GoStopApp {
     }
 
     this.render();
-    await this.sleep(400);
+    await this.sleep(180);
 
     // 점수 검사 및 고/스톱 판정
     const scoreObj = this.engine.calculateScore(player);
@@ -467,12 +500,12 @@ class GoStopApp {
           player.goCount++;
           player.lastScore = scoreObj.total;
           this.sound.playGo();
-          this.showBanner(`🤖 AI가 ${player.goCount}고를 외쳤습니다!`, 1800);
-          await this.sleep(1500);
+          this.showBanner(`🤖 AI가 ${player.goCount}고를 외쳤습니다!`, 1400);
+          await this.sleep(800);
         } else {
           this.sound.playStop();
-          this.showBanner('🛑 AI가 스톱을 선언했습니다!', 2000);
-          await this.sleep(1500);
+          this.showBanner('🛑 AI가 스톱을 선언했습니다!', 1600);
+          await this.sleep(900);
           this.handleRoundEnd('opponent', true);
           return;
         }
@@ -490,9 +523,10 @@ class GoStopApp {
     this.isProcessingTurn = false;
     this.render();
 
-    // AI 턴 진행
+    // AI 턴 진행 (배속 연동 대기시간)
     if (this.engine.turn === 'opponent') {
-      setTimeout(() => this.executeAITurn(), 800);
+      const aiDelay = Math.max(80, Math.round(350 / (this.gameSpeed || 1)));
+      setTimeout(() => this.executeAITurn(), aiDelay);
     }
   }
 
@@ -518,11 +552,11 @@ class GoStopApp {
 
     if (decision.isBomb) {
       this.sound.playBomb();
-      this.showBanner('💣 AI의 폭탄 투하!', 1400);
-      await this.sleep(1000);
+      this.showBanner('💣 AI의 폭탄 투하!', 1200);
+      await this.sleep(700);
     }
 
-    await this.sleep(600);
+    await this.sleep(250);
     await this.processDeckPhase(this.engine.opponent, handResult);
   }
 
@@ -557,14 +591,15 @@ class GoStopApp {
       this.engine.player.goCount++;
       this.engine.player.lastScore = score;
       this.sound.playGo();
-      this.showBanner(`🔥 ${this.engine.player.goCount}고!`, 1600);
-      await this.sleep(1200);
+      this.showBanner(`🔥 ${this.engine.player.goCount}고!`, 1200);
+      await this.sleep(700);
 
       // 계속 진행
       this.engine.switchTurn();
       this.isProcessingTurn = false;
       this.render();
-      setTimeout(() => this.executeAITurn(), 800);
+      const aiDelay = Math.max(80, Math.round(350 / (this.gameSpeed || 1)));
+      setTimeout(() => this.executeAITurn(), aiDelay);
     };
 
     this.dom.btnDeclareStop.onclick = () => {
@@ -621,25 +656,28 @@ class GoStopApp {
     } else if (oppScore >= 7 && oppScore > pScore) {
       this.handleRoundEnd('opponent', true);
     } else {
-      this.showBanner('판 나가리 (무승부)', 2000);
-      setTimeout(() => this.startNewGame(), 2000);
+      this.showBanner('판 나가리 (무승부)', 1500);
+      const restartDelay = Math.max(500, Math.round(1500 / (this.gameSpeed || 1)));
+      setTimeout(() => this.startNewGame(), restartDelay);
     }
   }
 
   // 시각 배너 텍스트 팝업 (쪽, 따닥, 쓸, 뻑 등)
-  showBanner(text, duration = 1200) {
+  showBanner(text, duration = 1000) {
     this.dom.effectBanner.textContent = text;
     this.dom.effectBanner.classList.remove('banner-pop');
     void this.dom.effectBanner.offsetWidth; // 리플로우 트리거
     this.dom.effectBanner.classList.add('banner-pop');
 
+    const adjustedDuration = Math.max(300, Math.round(duration / (this.gameSpeed || 1)));
     setTimeout(() => {
       this.dom.effectBanner.classList.remove('banner-pop');
-    }, duration);
+    }, adjustedDuration);
   }
 
   sleep(ms) {
-    return new Promise(r => setTimeout(r, ms));
+    const adjusted = Math.max(10, Math.round(ms / (this.gameSpeed || 1)));
+    return new Promise(r => setTimeout(r, adjusted));
   }
 }
 

@@ -354,7 +354,7 @@ body {
   display: flex;
   justify-content: center;
   align-items: center;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+  transition: transform 0.12s ease-out;
 }
 
 /* 터치 / 호버 시 튀어오름(Bounce) 인터랙션 */
@@ -378,7 +378,7 @@ body {
   overflow: hidden;
   box-shadow: 0 5px 12px rgba(0, 0, 0, 0.5);
   position: relative;
-  transition: all 0.25s ease;
+  transition: all 0.14s ease-out;
 }
 
 /* 바닥패 매칭 시 찬란한 발광 테두리 (Glow Highlight) */
