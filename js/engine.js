@@ -81,6 +81,20 @@ class GoStopEngine {
       this.field.push(this.deck.pop());
     }
 
+    // [정통 맞고 룰] 시작 전 바닥 8장에 깔린 보너스 쌍피는 선(선공 플레이어)이 즉시 획득하고 덱에서 바닥 8장을 채움
+    const startingBonusCards = [];
+    const firstPlayer = this.turn === 'player' ? this.player : this.opponent;
+    while (this.field.some(c => c.type === CARD_TYPE.BONUS)) {
+      const bonusIdx = this.field.findIndex(c => c.type === CARD_TYPE.BONUS);
+      const bonusCard = this.field.splice(bonusIdx, 1)[0];
+      this.addCapturedCard(firstPlayer, bonusCard);
+      startingBonusCards.push(bonusCard);
+      // 바닥에 8장이 유지되도록 덱에서 1장 추가 보충
+      if (this.deck.length > 0) {
+        this.field.push(this.deck.pop());
+      }
+    }
+
     // 손패 정렬 (월 순서대로)
     this.sortHand(this.player.hand);
     this.sortHand(this.opponent.hand);
@@ -93,7 +107,9 @@ class GoStopEngine {
     return {
       fieldChongtong,
       playerChongtong,
-      opponentChongtong
+      opponentChongtong,
+      startingBonusCards,
+      firstPlayer: this.turn
     };
   }
 
@@ -187,12 +203,14 @@ class GoStopEngine {
         playedCards.push(handCard);
       }
 
-      // 보너스패를 손에서 낸 경우: 즉시 피로 획득하고 덱에서 추가 보충
+      // [정통 맞고 룰] 보너스패를 손에서 낸 경우: 즉시 피로 획득하고 상대 피 1장 강탈 후 덱 드로우 진행
       if (handCard.type === CARD_TYPE.BONUS) {
         this.addCapturedCard(player, handCard);
+        const stolen = this.stealPi(player);
         return {
           step: 'bonusHand',
           card: handCard,
+          stolen,
           needDeckDraw: true
         };
       }
@@ -227,13 +245,24 @@ class GoStopEngine {
 
   /**
    * 턴 진행의 후반부: 중앙 덱에서 카드 1장 뒤집기
+   * [정통 맞고 룰] 덱에서 보너스 패가 나오면 뒤집은 사람이 즉시 피로 획득하고 상대 피 1장 강탈, 이어서 1장 더 뒤집음
    * @param {Object} player 현재 플레이어
    * @param {Object} handResult 앞서 playHandCard의 결과
    * @param {Object} chosenDeckFieldCard 덱 패가 바닥 2장과 매칭 시 유저 선택 카드
    */
   drawDeckCard(player, handResult, chosenDeckFieldCard = null) {
+    const bonusEvents = [];
+
+    // [정통 맞고 룰] 덱에서 보너스 패가 나오는 동안 계속 뒤집어서 즉시 획득 및 상대 피 1장 강탈
+    while (this.deck.length > 0 && this.deck[this.deck.length - 1].type === CARD_TYPE.BONUS) {
+      const bonusCard = this.deck.pop();
+      this.addCapturedCard(player, bonusCard);
+      const stolen = this.stealPi(player);
+      bonusEvents.push({ bonusCard, stolen });
+    }
+
     if (this.deck.length === 0) {
-      return { step: 'deckEmpty', roundOver: true };
+      return { step: 'deckEmpty', roundOver: true, bonusEvents };
     }
 
     const deckCard = this.deck.pop();
@@ -242,21 +271,6 @@ class GoStopEngine {
     let isJjok = false;
     let isTtadak = false;
     let isSseul = false;
-
-    // 보너스 패가 덱에서 나온 경우
-    if (deckCard.type === CARD_TYPE.BONUS) {
-      this.addCapturedCard(player, deckCard);
-      // 상대 피 1장 강탈
-      const stolen = this.stealPi(player);
-      // 덱에서 다시 1장 추가로 뽑음
-      const subResult = this.drawDeckCard(player, handResult, chosenDeckFieldCard);
-      return {
-        step: 'bonusDeck',
-        bonusCard: deckCard,
-        stolen,
-        subResult
-      };
-    }
 
     const playedCards = (handResult && handResult.playedCards) ? handResult.playedCards : [];
     const matchedFieldCards = (handResult && handResult.matchedFieldCards) ? handResult.matchedFieldCards : [];
@@ -347,6 +361,7 @@ class GoStopEngine {
       step: 'turnFinished',
       deckCard,
       deckMatchedFieldCards,
+      bonusEvents,
       isPpeok,
       isJjok,
       isTtadak,

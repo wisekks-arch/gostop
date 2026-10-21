@@ -206,6 +206,15 @@ class GoStopApp {
       this.promptShake(shakeMonths[0]);
     }
 
+    // [정통 맞고 룰] 시작 전 바닥에 깔린 보너스 쌍피 선공자 획득 배너 연출
+    if (initRes.startingBonusCards && initRes.startingBonusCards.length > 0) {
+      const isPlayerFirst = initRes.firstPlayer === 'player';
+      const who = isPlayerFirst ? '🎁 [선공] 내가' : '🤖 [선공] AI가';
+      const count = initRes.startingBonusCards.length;
+      this.sound.playSpecial();
+      this.showBanner(`${who} 바닥 보너스 쌍피 ${count}장 획득!`, 1800);
+    }
+
     this.render();
   }
 
@@ -477,6 +486,12 @@ class GoStopApp {
       this.sound.playBomb();
       this.showBanner('💣 폭탄 투하!', 1200);
       await this.sleep(700);
+    } else if (handResult.step === 'bonusHand') {
+      // [정통 맞고 룰] 손패에서 보너스 쌍피 냈을 때
+      this.sound.playSpecial();
+      const stolenMsg = handResult.stolen ? ' (상대 피 1장 강탈!)' : '';
+      this.showBanner(`✨ 보너스 쌍피 출격!${stolenMsg}`, 1200);
+      await this.sleep(Math.max(150, Math.round(500 / (this.gameSpeed || 1))));
     }
 
     await this.sleep(180);
@@ -502,6 +517,19 @@ class GoStopApp {
     this.sound.playCardSnap();
     const turnResult = this.engine.drawDeckCard(player, handResult, chosenDeckField);
     this.render();
+
+    // [정통 맞고 룰] 덱에서 보너스 쌍피를 뒤집었을 때 즉시 획득 및 상대 피 강탈 연출
+    if (turnResult.bonusEvents && turnResult.bonusEvents.length > 0) {
+      for (const ev of turnResult.bonusEvents) {
+        this.sound.playSpecial();
+        const who = isPlayer ? '✨ 내가' : '🤖 AI가';
+        const cardName = ev.bonusCard.name || '보너스 쌍피';
+        const stolenMsg = ev.stolen ? ' (상대 피 1장 강탈!)' : '';
+        this.showBanner(`${who} ${cardName} 뒤집기!${stolenMsg}`, 1200);
+        this.render();
+        await this.sleep(Math.max(150, Math.round(500 / (this.gameSpeed || 1))));
+      }
+    }
 
     // 특수 판정 사운드 및 이펙트 배너 노출
     if (turnResult.isPpeok) {
@@ -599,6 +627,12 @@ class GoStopApp {
       this.sound.playBomb();
       this.showBanner('💣 AI의 폭탄 투하!', 1200);
       await this.sleep(700);
+    } else if (handResult.step === 'bonusHand') {
+      // [정통 맞고 룰] AI가 손패에서 보너스 쌍피 냈을 때
+      this.sound.playSpecial();
+      const stolenMsg = handResult.stolen ? ' (플레이어 피 1장 강탈!)' : '';
+      this.showBanner(`🤖 AI가 보너스 쌍피를 냈습니다!${stolenMsg}`, 1200);
+      await this.sleep(Math.max(150, Math.round(500 / (this.gameSpeed || 1))));
     }
 
     await this.sleep(250);
