@@ -572,8 +572,8 @@ class GoStopApp {
         await this.sleep(700);
       }
       if (turnResult.isSseul) {
-        this.sound.playSpecial();
-        this.showBanner('🧹 판쓸이! (피 1장 강탈)', 1100);
+        this.sound.playSseul();
+        this.showBanner('🧹 판쓸이! (피 1장 강탈)', 1200);
         await this.sleep(700);
       }
       if (turnResult.deckMatchedFieldCards && turnResult.deckMatchedFieldCards.length > 0) {
