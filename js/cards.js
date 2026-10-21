@@ -131,9 +131,10 @@ const ROW_Y = [
  * @returns {string} SVG HTML 문자열
  */
 function renderCardSVG(card, isBack = false) {
-  const cardW = 103.2;
-  const cardH = 168.2;
-  const rx = 8;
+  // 실제 한국 화투 빨간 테두리 정밀 규격 (1:1.7 날렵한 정통 화투 비율)
+  const cardW = 90.6;
+  const cardH = 153.8;
+  const rx = 6;
 
   // 화투 뒷면 (한국 화투 고유의 강렬한 붉은 엠보싱 다이아몬드 질감 + 花 각인)
   if (isBack || !card) {
@@ -152,12 +153,12 @@ function renderCardSVG(card, isBack = false) {
         </defs>
         <!-- 검은 외곽 테두리 및 붉은 몸통 -->
         <rect width="${cardW}" height="${cardH}" rx="${rx}" fill="#18181b" />
-        <rect x="2.5" y="2.5" width="${cardW - 5}" height="${cardH - 5}" rx="${rx - 1}" fill="url(#backRed)" stroke="#f87171" stroke-width="1.2"/>
-        <rect x="6" y="6" width="${cardW - 12}" height="${cardH - 12}" rx="5" fill="url(#backDiamond)"/>
+        <rect x="2" y="2" width="${cardW - 4}" height="${cardH - 4}" rx="${rx - 1}" fill="url(#backRed)" stroke="#f87171" stroke-width="1.2"/>
+        <rect x="5" y="5" width="${cardW - 10}" height="${cardH - 10}" rx="4" fill="url(#backDiamond)"/>
         
         <!-- 중앙 황금색 花 엠블럼 -->
-        <circle cx="${cardW / 2}" cy="${cardH / 2}" r="20" fill="#581010" stroke="#fef08a" stroke-width="1.5"/>
-        <text x="${cardW / 2}" y="${cardH / 2 + 7}" font-family="'Batang', serif" font-size="20" font-weight="900" fill="#fef08a" text-anchor="middle">花</text>
+        <circle cx="${cardW / 2}" cy="${cardH / 2}" r="18" fill="#581010" stroke="#fef08a" stroke-width="1.5"/>
+        <text x="${cardW / 2}" y="${cardH / 2 + 6}" font-family="'Batang', serif" font-size="18" font-weight="900" fill="#fef08a" text-anchor="middle">花</text>
       </svg>
     `;
   }
@@ -169,16 +170,16 @@ function renderCardSVG(card, isBack = false) {
       <svg class="hwatu-svg" viewBox="0 0 ${cardW} ${cardH}" width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
         <rect width="${cardW}" height="${cardH}" rx="${rx}" fill="#18181b" />
         <rect x="2" y="2" width="${cardW - 4}" height="${cardH - 4}" rx="${rx - 1}" fill="#b91c1c" />
-        <rect x="5" y="5" width="${cardW - 10}" height="${cardH - 10}" rx="${rx - 2}" fill="#fffdfa" stroke="#dcd0b8" stroke-width="0.8"/>
+        <rect x="4" y="4" width="${cardW - 8}" height="${cardH - 8}" rx="${rx - 2}" fill="#ffffff" stroke="#dcd0b8" stroke-width="0.8"/>
         
         <!-- 보너스 민화 일러스트 -->
-        <circle cx="${cardW / 2}" cy="${cardH / 2 - 5}" r="32" fill="${is3Pi ? '#fef08a' : '#fee2e2'}" stroke="${is3Pi ? '#ca8a04' : '#ef4444'}" stroke-width="2"/>
-        <text x="${cardW / 2}" y="${cardH / 2 - 10}" font-family="'Noto Sans KR', sans-serif" font-size="14" font-weight="900" fill="#b91c1c" text-anchor="middle">보너스</text>
-        <text x="${cardW / 2}" y="${cardH / 2 + 15}" font-family="'Noto Sans KR', sans-serif" font-size="22" font-weight="900" fill="${is3Pi ? '#854d0e' : '#b91c1c'}" text-anchor="middle">${is3Pi ? '3皮' : '2皮'}</text>
+        <circle cx="${cardW / 2}" cy="${cardH / 2 - 5}" r="28" fill="${is3Pi ? '#fef08a' : '#fee2e2'}" stroke="${is3Pi ? '#ca8a04' : '#ef4444'}" stroke-width="2"/>
+        <text x="${cardW / 2}" y="${cardH / 2 - 10}" font-family="'Noto Sans KR', sans-serif" font-size="13" font-weight="900" fill="#b91c1c" text-anchor="middle">보너스</text>
+        <text x="${cardW / 2}" y="${cardH / 2 + 13}" font-family="'Noto Sans KR', sans-serif" font-size="20" font-weight="900" fill="${is3Pi ? '#854d0e' : '#b91c1c'}" text-anchor="middle">${is3Pi ? '3皮' : '2皮'}</text>
         
         <!-- 하단 복 문구 -->
-        <rect x="18" y="${cardH - 34}" width="${cardW - 36}" height="20" rx="10" fill="#991b1b"/>
-        <text x="${cardW / 2}" y="${cardH - 20}" font-family="'Batang', serif" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle">福 (${is3Pi ? '삼피' : '쌍피'})</text>
+        <rect x="15" y="${cardH - 30}" width="${cardW - 30}" height="18" rx="9" fill="#991b1b"/>
+        <text x="${cardW / 2}" y="${cardH - 17}" font-family="'Batang', serif" font-size="11" font-weight="bold" fill="#fff" text-anchor="middle">福 (${is3Pi ? '삼피' : '쌍피'})</text>
       </svg>
     `;
   }
@@ -186,8 +187,9 @@ function renderCardSVG(card, isBack = false) {
   // 1월 ~ 12월 48장 정통 한국 화투 벡터 마스터 에셋 연동
   const col = card.month - 1;
   const row = card.row !== undefined ? card.row : 0;
-  const offsetX = COLX_VAL(col);
-  const offsetY = ROWY_VAL(row);
+  // 빨간 테두리 외곽 중심 보정 오프셋 (+6.3, +7.2)
+  const offsetX = COLX_VAL(col) + 6.3;
+  const offsetY = ROWY_VAL(row) + 7.2;
 
   const badge = getCardTagBadge(card);
 
@@ -199,10 +201,10 @@ function renderCardSVG(card, isBack = false) {
         </clipPath>
       </defs>
 
-      <!-- 불투명 순백색 카드 베이스 바탕 -->
+      <!-- 카드 안쪽 불투명 순백색 바탕 -->
       <rect width="${cardW}" height="${cardH}" rx="${rx}" fill="#ffffff" />
 
-      <!-- 정통 한국 화투 슬라이스 벡터 렌더링 -->
+      <!-- 정통 한국 화투 슬라이스 벡터 렌더링 (빨간 테두리 밀착) -->
       <g clip-path="url(#cardClip_${card.id})">
         <image href="./assets/hwatu_deck.svg" x="-${offsetX}" y="-${offsetY}" width="1326" height="732" preserveAspectRatio="none"/>
       </g>
@@ -228,58 +230,58 @@ function getCardTagBadge(card) {
   if (card.isKwang) {
     // 붉은 광 엠블럼
     return `
-      <g transform="translate(64, 8)">
-        <circle cx="16" cy="16" r="14" fill="#dc2626" stroke="#fff" stroke-width="1.8" />
-        <text x="16" y="22" font-family="'Batang', 'Noto Sans KR', serif" font-size="15" font-weight="900" fill="#fff" text-anchor="middle">光</text>
+      <g transform="translate(56, 5)">
+        <circle cx="14" cy="14" r="12" fill="#dc2626" stroke="#fff" stroke-width="1.6" />
+        <text x="14" y="19" font-family="'Batang', 'Noto Sans KR', serif" font-size="13" font-weight="900" fill="#fff" text-anchor="middle">光</text>
       </g>
     `;
   }
   if (card.godori) {
     // 고도리 엠블럼
     return `
-      <g transform="translate(54, 8)">
-        <rect x="0" y="0" width="44" height="18" rx="9" fill="#1e40af" stroke="#93c5fd" stroke-width="1.2"/>
-        <text x="22" y="13" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">고도리</text>
+      <g transform="translate(44, 5)">
+        <rect x="0" y="0" width="42" height="17" rx="8" fill="#1e40af" stroke="#93c5fd" stroke-width="1.2"/>
+        <text x="21" y="12" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">고도리</text>
       </g>
     `;
   }
   if (card.rib === RIB_TYPE.HONG) {
     return `
-      <g transform="translate(56, 8)">
-        <rect x="0" y="0" width="42" height="18" rx="5" fill="#dc2626" stroke="#fff" stroke-width="1"/>
-        <text x="21" y="13" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">홍단</text>
+      <g transform="translate(46, 5)">
+        <rect x="0" y="0" width="40" height="16" rx="5" fill="#dc2626" stroke="#fff" stroke-width="1"/>
+        <text x="20" y="12" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">홍단</text>
       </g>
     `;
   }
   if (card.rib === RIB_TYPE.CHEONG) {
     return `
-      <g transform="translate(56, 8)">
-        <rect x="0" y="0" width="42" height="18" rx="5" fill="#1e3a8a" stroke="#fff" stroke-width="1"/>
-        <text x="21" y="13" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">청단</text>
+      <g transform="translate(46, 5)">
+        <rect x="0" y="0" width="40" height="16" rx="5" fill="#1e3a8a" stroke="#fff" stroke-width="1"/>
+        <text x="20" y="12" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">청단</text>
       </g>
     `;
   }
   if (card.rib === RIB_TYPE.CHO) {
     return `
-      <g transform="translate(56, 8)">
-        <rect x="0" y="0" width="42" height="18" rx="5" fill="#047857" stroke="#fff" stroke-width="1"/>
-        <text x="21" y="13" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">초단</text>
+      <g transform="translate(46, 5)">
+        <rect x="0" y="0" width="40" height="16" rx="5" fill="#047857" stroke="#fff" stroke-width="1"/>
+        <text x="20" y="12" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">초단</text>
       </g>
     `;
   }
   if (card.piValue && card.piValue > 1) {
     return `
-      <g transform="translate(56, 8)">
-        <rect x="0" y="0" width="42" height="18" rx="5" fill="#d97706" stroke="#fff" stroke-width="1.2"/>
-        <text x="21" y="13" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">${card.piValue}皮</text>
+      <g transform="translate(46, 5)">
+        <rect x="0" y="0" width="40" height="16" rx="5" fill="#d97706" stroke="#fff" stroke-width="1.2"/>
+        <text x="20" y="12" font-family="'Noto Sans KR', sans-serif" font-size="10" font-weight="900" fill="#fff" text-anchor="middle">${card.piValue}皮</text>
       </g>
     `;
   }
   if (card.canBeDoublePi) {
     return `
-      <g transform="translate(50, 8)">
-        <rect x="0" y="0" width="48" height="18" rx="5" fill="#7e22ce" stroke="#fff" stroke-width="1"/>
-        <text x="24" y="13" font-family="'Noto Sans KR', sans-serif" font-size="9" font-weight="900" fill="#fff" text-anchor="middle">쌍피/열</text>
+      <g transform="translate(40, 5)">
+        <rect x="0" y="0" width="46" height="16" rx="5" fill="#7e22ce" stroke="#fff" stroke-width="1"/>
+        <text x="23" y="12" font-family="'Noto Sans KR', sans-serif" font-size="9" font-weight="900" fill="#fff" text-anchor="middle">쌍피/열</text>
       </g>
     `;
   }

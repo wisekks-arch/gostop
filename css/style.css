@@ -10,9 +10,9 @@
   --gold-glow: rgba(255, 209, 102, 0.7);
   --red-accent: #e63946;
   --text-light: #f8f9fa;
-  --card-w: 68px;
+  --card-w: 62px;
   --card-h: 105px;
-  --card-radius: 6px;
+  --card-radius: 5px;
   --font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
 }
 
@@ -221,10 +221,10 @@ body {
 
 .mini-card {
   position: absolute;
-  width: 36px;
+  width: 33px;
   height: 52px;
-  border-radius: 4px;
-  background-color: #ffffff;
+  border-radius: 3px;
+  background-color: transparent;
   overflow: hidden;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
@@ -369,14 +369,14 @@ body {
   pointer-events: none;
 }
 
-/* 카드 공통 스타일 (불투명 흰색 바탕 및 라운드) */
+/* 카드 공통 스타일 (빨간 테두리 밀착 및 섀도우) */
 .hwatu-card-wrap {
   width: var(--card-w);
   height: var(--card-h);
   border-radius: var(--card-radius);
-  background-color: #ffffff;
+  background-color: transparent;
   overflow: hidden;
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 5px 12px rgba(0, 0, 0, 0.5);
   position: relative;
   transition: all 0.25s ease;
 }
@@ -589,46 +589,26 @@ body {
   }
 }
 
-/* 가로 모드 유도 회전 오버레이 (세로 화면 감지 시) */
-#rotate-guide-overlay {
-  display: none;
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: #081c15;
-  z-index: 9999;
-  flex-direction: column;
-  justify-content: center;
-  align-items: center;
-  text-align: center;
-  padding: 20px;
-}
-
-.rotate-icon {
-  font-size: 60px;
-  animation: rotate-phone 2s infinite ease-in-out;
-  margin-bottom: 20px;
-}
-
-@keyframes rotate-phone {
-  0% {
-    transform: rotate(0deg);
-  }
-
-  50% {
-    transform: rotate(90deg);
-  }
-
-  100% {
-    transform: rotate(0deg);
-  }
-}
-
-/* 세로 모드일 때만 회전 안내 노출 */
+/* ============================================================
+   모바일 가로 모드 자동 강제 회전 (세로 접속 시에도 즉시 90도 가로 맞고판 렌더링)
+   ============================================================ */
 @media screen and (orientation: portrait) {
-  #rotate-guide-overlay {
-    display: flex;
+  html,
+  body {
+    width: 100vw;
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+  }
+
+  #game-app {
+    position: fixed;
+    top: 50% !important;
+    left: 50% !important;
+    width: 100vh !important;
+    height: 100vw !important;
+    transform: translate(-50%, -50%) rotate(90deg) !important;
+    transform-origin: center center !important;
+    overflow: hidden !important;
   }
 }
