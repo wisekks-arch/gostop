@@ -4,8 +4,8 @@
    ============================================================ */
 
 :root {
-  --mat-bg-color: #0b3c2c;
-  --mat-inner-border: rgba(255, 215, 0, 0.25);
+  --mat-bg-color: #344229; /* 국방부 담요 전통 올리브 카키 */
+  --mat-inner-border: rgba(220, 210, 160, 0.25);
   --gold-accent: #ffd166;
   --gold-glow: rgba(255, 209, 102, 0.7);
   --red-accent: #e63946;
@@ -33,19 +33,20 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #05140e;
+  background-color: #1a2215;
   font-family: var(--font-family);
   color: var(--text-light);
 }
 
-/* 메인 컨테이너 (16:9 ~ 20:9 비율 가로 뷰포트 고정) */
+/* 메인 컨테이너 (국방부 담요 올리브 카키 울 펠트 매트) */
 #game-app {
   position: relative;
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(circle at 50% 50%, #11573f 0%, #0b3c2c 60%, #052117 100%);
+  background: radial-gradient(circle at 50% 50%, #465738 0%, #344229 55%, #1e2817 100%);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 
@@ -223,6 +224,8 @@ body {
   width: 36px;
   height: 52px;
   border-radius: 4px;
+  background-color: #ffffff;
+  overflow: hidden;
   box-shadow: 0 2px 5px rgba(0, 0, 0, 0.4);
   transition: all 0.2s ease;
 }
@@ -268,16 +271,16 @@ body {
   border-radius: 10px;
 }
 
-/* 바닥패 보드 */
+/* 바닥패 보드 (국방부 담요 중앙 매트) */
 .field-board {
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   gap: 10px 14px;
   height: 100%;
-  background: rgba(0, 0, 0, 0.2);
+  background: rgba(18, 25, 14, 0.38);
   border-radius: 16px;
-  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border: 1px dashed rgba(220, 215, 170, 0.25);
   padding: 8px 14px;
   overflow: visible;
 }
@@ -366,12 +369,14 @@ body {
   pointer-events: none;
 }
 
-/* 카드 카드 공통 스타일 */
+/* 카드 공통 스타일 (불투명 흰색 바탕 및 라운드) */
 .hwatu-card-wrap {
   width: var(--card-w);
   height: var(--card-h);
   border-radius: var(--card-radius);
-  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.4);
+  background-color: #ffffff;
+  overflow: hidden;
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.45);
   position: relative;
   transition: all 0.25s ease;
 }

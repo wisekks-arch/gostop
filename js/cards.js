@@ -199,6 +199,9 @@ function renderCardSVG(card, isBack = false) {
         </clipPath>
       </defs>
 
+      <!-- 불투명 순백색 카드 베이스 바탕 -->
+      <rect width="${cardW}" height="${cardH}" rx="${rx}" fill="#ffffff" />
+
       <!-- 정통 한국 화투 슬라이스 벡터 렌더링 -->
       <g clip-path="url(#cardClip_${card.id})">
         <image href="./assets/hwatu_deck.svg" x="-${offsetX}" y="-${offsetY}" width="1326" height="732" preserveAspectRatio="none"/>
