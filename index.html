@@ -6,7 +6,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="theme-color" content="#0b3c2c">
-  <title>정통 맞고 (GOSTOP) - 모바일 1:1 대전</title>
+  <title>천하제일 맞고전 - 10단 도장깨기</title>
   <script>
     window.__CONSOLE_ERRORS__ = [];
     window.onerror = function(message, source, lineno, colno, error) {
@@ -18,126 +18,122 @@
   <link rel="stylesheet" href="./css/style.css">
 </head>
 <body>
-  <!-- 모바일 가로 모드 유도 오버레이 -->
-  <div id="rotate-guide-overlay">
-    <div class="rotate-icon">📱 ↷</div>
-    <h2 style="color: #ffd166; margin-bottom: 8px;">가로 모드로 회전해 주세요</h2>
-    <p style="color: #ccc; font-size: 14px;">화투판의 손맛과 최적의 배치를 위해<br>스마트폰 화면을 가로로 돌려주세요.</p>
-  </div>
+  <!-- 반응형 스마트폰 최외곽 뷰포트 -->
+  <div id="app-viewport">
 
-  <!-- 메인 게임 애플리케이션 -->
-  <div id="game-app">
-    <!-- 상단 유틸리티 바 -->
-    <header class="top-bar">
-      <div class="game-title">
-        <span>🎴 정통 맞고 1:1</span>
-        <span id="turn-indicator" style="font-size: 11px; color: #a7f3d0; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 10px;">내 턴</span>
+    <!-- ============================================================
+         화면 1: 10인의 고수 선택 로비 (1단 ~ 10단 역순 도장깨기)
+         ============================================================ -->
+    <section id="lobby-view">
+      <!-- 로비 헤더: 타이틀 & 유저 보유 전 & 전적 -->
+      <div class="lobby-header">
+        <div class="lobby-title-bar">
+          <div class="lobby-title">🎴 천하제일 맞고전</div>
+          <button id="btn-lobby-sound" class="btn-bottom-icon">🔊 소리</button>
+        </div>
+        <div class="user-status-card">
+          <div class="user-money-display">
+            <span class="label">내 보유 전</span>
+            <span class="value" id="lobby-user-money">1,000,000전</span>
+          </div>
+          <div class="user-stats-display">
+            <span>도달: <b id="lobby-unlocked-dan">10단</b></span><br>
+            <span>전적: <b id="lobby-user-record">0승 0패</b></span>
+          </div>
+        </div>
       </div>
-      <div class="util-buttons">
-        <button id="btn-kookjin-toggle" class="btn-icon" title="국진 열끗을 쌍피로 전환">🌸 국진: 열끗</button>
-        <button id="btn-sound" class="btn-icon">🔊 소리 켬</button>
-        <button id="btn-fullscreen" class="btn-icon">⛶ 전체화면</button>
-        <button id="btn-restart" class="btn-icon">🔄 새로고침</button>
+
+      <!-- 10인의 고수 도장깨기 타워 리스트 -->
+      <div class="tower-list-container" id="tower-list">
+        <!-- 10단부터 1단까지 동적 렌더링 -->
       </div>
-    </header>
+    </section>
 
-    <!-- 게임 테이블 매트 -->
-    <main class="game-table">
-      <!-- 1. 상대방(컴퓨터) 정보 & 획득패 영역 -->
-      <section class="opponent-row">
-        <!-- 상대방 프로필 -->
-        <div class="profile-card">
-          <div class="profile-avatar">🤖</div>
-          <div class="profile-info">
-            <span class="profile-name">타짜 AI <span id="opp-status-badge" style="font-size: 10px; color: #f87171;"></span></span>
-            <span class="profile-money" id="opp-money">100,000원</span>
+    <!-- ============================================================
+         화면 2: 세로형 인게임 화면 (In-Game View - 100dvh)
+         ============================================================ -->
+    <section id="game-view" class="hidden">
+      <!-- 1. 상대방 영역 (상단) -->
+      <div class="game-top-row">
+        <div class="profile-line">
+          <div class="profile-left">
+            <div class="profile-mini-avatar" id="game-opp-avatar">👴</div>
+            <div class="profile-text-group">
+              <span class="name" id="game-opp-name">10단 동네 복덕방 김씨</span>
+              <span class="money" id="game-opp-money">자금: 1,000,000전</span>
+            </div>
           </div>
-          <div class="score-badge">
-            <div class="score-val" id="opp-score">0</div>
-            <div class="score-lbl">점수</div>
+          <div class="score-box">
+            <div class="val" id="game-opp-score">0</div>
+            <div class="lbl">점수</div>
           </div>
         </div>
 
-        <!-- 상대방 획득패 (광 / 열 / 띠 / 피) -->
-        <div class="captured-panel" id="opp-captured">
-          <div class="captured-group">
-            <span class="group-title">광 (<span id="opp-cnt-kwang">0</span>)</span>
-            <div class="group-cards" id="opp-cap-kwang"></div>
-          </div>
-          <div class="captured-group">
-            <span class="group-title">열 (<span id="opp-cnt-ten">0</span>)</span>
-            <div class="group-cards" id="opp-cap-ten"></div>
-          </div>
-          <div class="captured-group">
-            <span class="group-title">띠 (<span id="opp-cnt-rib">0</span>)</span>
-            <div class="group-cards" id="opp-cap-rib"></div>
-          </div>
-          <div class="captured-group">
-            <span class="group-title">피 (<span id="opp-cnt-pi">0</span>)</span>
-            <div class="group-cards" id="opp-cap-pi"></div>
-          </div>
+        <!-- 상대 획득패 요약 (광 | 열 | 띠 | 피) -->
+        <div class="captured-summary-bar" id="game-opp-captured-bar">
+          <span>광: <b id="opp-cnt-kwang">0</b></span>
+          <span>열: <b id="opp-cnt-ten">0</b></span>
+          <span>띠: <b id="opp-cnt-rib">0</b></span>
+          <span>피: <b id="opp-cnt-pi">0</b></span>
         </div>
-      </section>
+      </div>
 
-      <!-- 2. 중앙 필드: 중앙 덱 + 바닥패 영역 (최대 12~14장) -->
-      <section class="field-row">
-        <!-- 중앙 덱 영역 -->
-        <div class="deck-area">
-          <div class="deck-stack" id="deck-stack">
-            <!-- 덱 렌더링 레이어 -->
+      <!-- 2. 중앙 바닥패 영역 (중앙 덱 + 8~12장 패) -->
+      <div class="game-field-row">
+        <div class="field-deck-and-board">
+          <!-- 중앙 덱 -->
+          <div class="center-deck-wrap">
+            <div class="center-deck-stack" id="game-deck-stack"></div>
+            <span class="center-deck-count" id="game-deck-count">덱 22장</span>
           </div>
-          <span class="deck-count" id="deck-count">덱 22장</span>
+          <!-- 바닥패 판 -->
+          <div class="field-card-board" id="game-field-board"></div>
         </div>
+      </div>
 
-        <!-- 바닥패 판 (월별 슬롯) -->
-        <div class="field-board" id="field-board">
-          <!-- 12개 월별 슬롯 동적 생성 -->
-        </div>
-      </section>
-
-      <!-- 3. 하단 플레이어: 내 획득패 + 내 프로필 + 내 손패(10장) -->
-      <section class="player-row">
-        <div class="player-status-bar">
-          <!-- 내 획득패 (광 / 열 / 띠 / 피) -->
-          <div class="captured-panel" id="player-captured">
-            <div class="captured-group">
-              <span class="group-title">광 (<span id="player-cnt-kwang">0</span>)</span>
-              <div class="group-cards" id="player-cap-kwang"></div>
-            </div>
-            <div class="captured-group">
-              <span class="group-title">열 (<span id="player-cnt-ten">0</span>)</span>
-              <div class="group-cards" id="player-cap-ten"></div>
-            </div>
-            <div class="captured-group">
-              <span class="group-title">띠 (<span id="player-cnt-rib">0</span>)</span>
-              <div class="group-cards" id="player-cap-rib"></div>
-            </div>
-            <div class="captured-group">
-              <span class="group-title">피 (<span id="player-cnt-pi">0</span>)</span>
-              <div class="group-cards" id="player-cap-pi"></div>
-            </div>
-          </div>
-
-          <!-- 내 프로필 & 점수 & 흔들기/폭탄 여부 -->
-          <div class="profile-card">
-            <div class="score-badge">
-              <div class="score-val" id="player-score">0</div>
-              <div class="score-lbl">점수</div>
-            </div>
-            <div class="profile-info">
-              <span class="profile-name">나 (플레이어) <span id="player-status-badge" style="font-size: 10px; color: #ffd166;"></span></span>
-              <span class="profile-money" id="player-money">100,000원</span>
-            </div>
-            <div class="profile-avatar" style="background: linear-gradient(135deg, #1d3557, #457b9d);">🧑</div>
-          </div>
+      <!-- 3. 내 획득패 및 실시간 점수 영역 (중하단) -->
+      <div class="game-player-mid-row">
+        <div class="captured-summary-bar" id="game-player-captured-bar">
+          <span>광: <b id="player-cnt-kwang">0</b></span>
+          <span>열: <b id="player-cnt-ten">0</b></span>
+          <span>띠: <b id="player-cnt-rib">0</b></span>
+          <span>피: <b id="player-cnt-pi">0</b></span>
         </div>
 
-        <!-- 내 손패 영역 (10장) -->
-        <div class="player-hand-container" id="player-hand">
-          <!-- 손패 카드 슬롯 동적 렌더링 -->
+        <div class="profile-line">
+          <div class="profile-left">
+            <div class="profile-mini-avatar" style="background:#1d3557;">🧑</div>
+            <div class="profile-text-group">
+              <span class="name">도전자 타짜 <span id="game-player-badges" style="font-size:10px; color:#ffd166;"></span></span>
+              <span class="money" id="game-player-money">1,000,000전</span>
+            </div>
+          </div>
+          <div class="score-box" style="background: linear-gradient(135deg, #1d3557, #0d1b2a);">
+            <div class="val" id="game-player-score">0</div>
+            <div class="lbl">내 점수</div>
+          </div>
         </div>
-      </section>
-    </main>
+      </div>
+
+      <!-- 4. 내 손패 영역 (전체 뷰포트의 최소 22% 이상) -->
+      <div class="game-hand-row">
+        <div class="hand-cards-list" id="game-hand-cards">
+          <!-- 손패 10장 동적 렌더링 -->
+        </div>
+      </div>
+
+      <!-- 5. 최하단 메뉴 및 판돈 바 -->
+      <div class="game-bottom-bar">
+        <div class="bottom-buttons">
+          <button id="btn-back-lobby" class="btn-bottom-icon">🏠 로비</button>
+          <button id="btn-game-sound" class="btn-bottom-icon">🔊 소리</button>
+          <button id="btn-kookjin-toggle" class="btn-bottom-icon">🌸 국진</button>
+        </div>
+        <div class="bottom-stake-info" id="game-stake-info">
+          점당: 10,000전
+        </div>
+      </div>
+    </section>
 
     <!-- 특수 이펙트 배너 (쪽, 따닥, 쓸, 뻑, 폭탄) -->
     <div id="effect-banner"></div>
@@ -146,10 +142,10 @@
     <div class="modal-overlay" id="modal-gostop">
       <div class="modal-box">
         <h2 class="modal-title" id="gostop-title">🎴 7점 달성!</h2>
-        <p class="modal-desc" id="gostop-desc">현재 <b id="gostop-score-val" style="color:#ffd166; font-size:18px;">7</b>점입니다. 계속 진행(고)하시겠습니까, 승리(스톱)하시겠습니까?</p>
-        <div class="go-stop-buttons">
-          <button id="btn-declare-go" class="btn-gostop btn-go">🔥 고 (GO)</button>
-          <button id="btn-declare-stop" class="btn-gostop btn-stop">🛑 스톱 (STOP)</button>
+        <p class="modal-desc" id="gostop-desc">현재 <b id="gostop-score-val" style="color:#ffd166; font-size:18px;">7</b>점입니다. 고하시겠습니까, 스톱하시겠습니까?</p>
+        <div style="display:flex; gap:12px; justify-content:center;">
+          <button id="btn-declare-go" class="btn-challenge" style="background:#e63946; font-size:18px; padding:12px 24px;">🔥 고 (GO)</button>
+          <button id="btn-declare-stop" class="btn-challenge" style="background:#1d3557; font-size:18px; padding:12px 24px;">🛑 스톱 (STOP)</button>
         </div>
       </div>
     </div>
@@ -157,44 +153,61 @@
     <!-- 모달 2: 바닥패 2장 중 1장 선택 모달 -->
     <div class="modal-overlay" id="modal-choice">
       <div class="modal-box">
-        <h2 class="modal-title">가져갈 패를 선택하세요</h2>
-        <p class="modal-desc">바닥에 같은 월의 패가 2장 있습니다. 가져갈 패를 터치하세요.</p>
-        <div class="choice-cards-container" id="choice-cards-list">
-          <!-- 선택 대상 카드 2장 -->
-        </div>
+        <h2 class="modal-title" style="font-size:18px;">가져갈 패를 선택하세요</h2>
+        <p class="modal-desc">바닥에 같은 월의 패가 2장 있습니다.</p>
+        <div style="display:flex; gap:16px; justify-content:center;" id="choice-cards-list"></div>
       </div>
     </div>
 
     <!-- 모달 3: 게임 종료 정산 결과 모달 -->
     <div class="modal-overlay" id="modal-result">
-      <div class="modal-box" style="min-width: 320px;">
-        <h2 class="modal-title" id="result-title">승리! 🎉</h2>
-        <p class="modal-desc" id="result-winner-desc"></p>
-        
-        <div class="result-score-list" id="result-score-breakdown">
-          <!-- 점수 및 배수 내역 -->
-        </div>
-
-        <button id="btn-next-round" class="btn-gostop btn-go" style="font-size: 16px; padding: 12px 28px;">다음 판 시작하기 🎴</button>
-      </div>
-    </div>
-
-    <!-- 모달 4: 흔들기 / 폭탄 선택 모달 -->
-    <div class="modal-overlay" id="modal-shake">
       <div class="modal-box">
-        <h2 class="modal-title">⚡ 흔들기 또는 폭탄</h2>
-        <p class="modal-desc" id="shake-desc">손패에 같은 월의 패가 3장 있습니다!</p>
-        <div class="go-stop-buttons">
-          <button id="btn-do-shake" class="btn-gostop btn-go" style="font-size: 17px; padding: 10px 24px;">흔들기 (2배)</button>
-          <button id="btn-skip-shake" class="btn-gostop btn-stop" style="font-size: 17px; padding: 10px 24px;">그냥 진행</button>
+        <h2 class="modal-title" id="result-title">승리! 🎉</h2>
+        <p class="modal-desc" id="result-desc"></p>
+        <div id="result-breakdown" style="background:rgba(0,0,0,0.4); padding:10px; border-radius:8px; font-size:12px; margin-bottom:14px; text-align:left; display:flex; flex-direction:column; gap:4px;"></div>
+        <div style="display:flex; gap:8px; justify-content:center;">
+          <button id="btn-result-rematch" class="btn-challenge" style="font-size:14px; padding:10px 18px;">한 판 더 🎴</button>
+          <button id="btn-result-lobby" class="btn-challenge" style="background:#475569; font-size:14px; padding:10px 18px;">로비로 이동</button>
         </div>
       </div>
     </div>
+
+    <!-- 모달 4: 상위 단계 해금 축하 모달 -->
+    <div class="modal-overlay" id="modal-unlock">
+      <div class="modal-box">
+        <h2 class="modal-title" style="color:#ffd166;">🏆 도장깨기 성공!</h2>
+        <p class="modal-desc" id="unlock-desc">고수를 격파하고 상위 단계가 해금되었습니다!</p>
+        <button id="btn-unlock-ok" class="btn-challenge" style="padding:10px 24px; font-size:15px;">확인</button>
+      </div>
+    </div>
+
+    <!-- 모달 5: 올인(파산) 감지 모달 & 보상형 광고 30초 시청 충전 -->
+    <div class="modal-overlay" id="modal-bankrupt">
+      <div class="modal-box">
+        <h2 class="modal-title" style="color:#ef4444;">💀 올인! 파산했습니다</h2>
+        <p class="modal-desc">판돈이 모두 떨어졌습니다.<br>보상형 광고를 30초 시청하고 <b>100만 전</b>을 무료로 충전받으세요!</p>
+        <button id="btn-watch-ad" class="btn-challenge" style="background:linear-gradient(135deg, #f59e0b, #d97706); font-size:15px; padding:12px 20px; width:100%;">🎬 광고 보고 100만 전 무료 충전</button>
+      </div>
+    </div>
+
+    <!-- 화면 3: 보상형 광고 30초 시청 시뮬레이션 뷰 -->
+    <div id="ad-view">
+      <div class="ad-timer-circle" id="ad-timer-num">30</div>
+      <h3 style="color:#ffd166; margin-bottom:8px;">스폰서 광고 시청 중...</h3>
+      <p style="color:#94a3b8; font-size:13px; margin-bottom:20px;">광고 시청이 끝나면 즉시 100만 전이 지급됩니다.</p>
+      <div style="width:240px; height:120px; background:#1e293b; border-radius:12px; display:flex; justify-content:center; align-items:center; color:#64748b; font-size:14px; margin-bottom:24px;">
+        🎮 AdMob / H5 Rewarded Video
+      </div>
+      <button id="btn-skip-ad" style="display:none; background:#22c55e; border:none; color:#fff; padding:10px 24px; border-radius:20px; font-weight:bold;">보상 수령하고 닫기</button>
+    </div>
+
   </div>
 
-  <!-- 스크립트 파일 로드 -->
+  <!-- 스크립트 모듈 로드 -->
   <script src="./js/cards.js"></script>
   <script src="./js/sound.js"></script>
+  <script src="./js/masters.js"></script>
+  <script src="./js/storage.js"></script>
   <script src="./js/engine.js"></script>
   <script src="./js/ai.js"></script>
   <script src="./js/app.js"></script>
