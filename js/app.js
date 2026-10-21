@@ -486,11 +486,24 @@ class GoStopApp {
       this.sound.playBomb();
       this.showBanner('💣 폭탄 투하!', 1200);
       await this.sleep(700);
-    } else if (handResult.step === 'bonusHand') {
-      // [정통 맞고 룰] 손패에서 보너스 쌍피 냈을 때
+    } else if (handResult.step === 'bonusHandReplenish') {
+      // [정통 맞고 룰] 손패에서 보너스 쌍피 냈을 때: 즉시 피로 가고 상대 피 1장 강탈 + 덱에서 손패 1장 보충
       this.sound.playSpecial();
       const stolenMsg = handResult.stolen ? ' (상대 피 1장 강탈!)' : '';
-      this.showBanner(`✨ 보너스 쌍피 출격!${stolenMsg}`, 1200);
+      this.showBanner(`✨ 보너스 쌍피 출격!${stolenMsg} 덱에서 1장 보충`, 1400);
+      this.render();
+      await this.sleep(Math.max(180, Math.round(550 / (this.gameSpeed || 1))));
+      // 덱에서 보충받아 손패가 복구되었으므로 바닥패 짝수 유지를 위해 계속해서 손패 1장을 더 내도록 대기
+      this.isProcessingTurn = false;
+      this.render();
+      return;
+    } else if (handResult.isJaPpeokEat) {
+      this.sound.playSpecial();
+      this.showBanner('💥 자뻑 먹기 대성공! (상대 피 2장 강탈!)', 1300);
+      await this.sleep(Math.max(180, Math.round(600 / (this.gameSpeed || 1))));
+    } else if (handResult.isTaPpeokEat) {
+      this.sound.playSpecial();
+      this.showBanner('🍽️ 싼 패(뻑) 먹기! (상대 피 1장 강탈!)', 1200);
       await this.sleep(Math.max(150, Math.round(500 / (this.gameSpeed || 1))));
     }
 
@@ -537,6 +550,18 @@ class GoStopApp {
       this.showBanner('💩 뻑!', 1000);
       await this.sleep(600);
     } else {
+      if (turnResult.isJaPpeokEat && (!handResult || !handResult.isJaPpeokEat)) {
+        this.sound.playSpecial();
+        const who = isPlayer ? '💥 덱으로 자뻑 먹기 대성공! (상대 피 2장 강탈!)' : '💥 AI가 덱으로 자뻑을 먹었습니다! (피 2장 강탈!)';
+        this.showBanner(who, 1300);
+        await this.sleep(700);
+      } else if (turnResult.isTaPpeokEat && (!handResult || !handResult.isTaPpeokEat)) {
+        this.sound.playSpecial();
+        const who = isPlayer ? '🍽️ 덱으로 싼 패(뻑) 먹기! (상대 피 1장 강탈!)' : '🍽️ AI가 덱으로 싼 패를 먹었습니다! (피 1장 강탈!)';
+        this.showBanner(who, 1200);
+        await this.sleep(600);
+      }
+
       if (turnResult.isTtadak) {
         this.sound.playSpecial();
         this.showBanner('⚡ 따닥! (피 1장 강탈)', 1100);
@@ -627,11 +652,22 @@ class GoStopApp {
       this.sound.playBomb();
       this.showBanner('💣 AI의 폭탄 투하!', 1200);
       await this.sleep(700);
-    } else if (handResult.step === 'bonusHand') {
-      // [정통 맞고 룰] AI가 손패에서 보너스 쌍피 냈을 때
+    } else if (handResult.step === 'bonusHandReplenish') {
+      // [정통 맞고 룰] AI가 손패에서 보너스 쌍피 냈을 때: 즉시 피로 가고 플레이어 피 1장 강탈 + 덱에서 손패 1장 보충
       this.sound.playSpecial();
       const stolenMsg = handResult.stolen ? ' (플레이어 피 1장 강탈!)' : '';
-      this.showBanner(`🤖 AI가 보너스 쌍피를 냈습니다!${stolenMsg}`, 1200);
+      this.showBanner(`🤖 AI가 보너스 쌍피를 냈습니다!${stolenMsg} 덱에서 보충`, 1400);
+      this.render();
+      await this.sleep(Math.max(180, Math.round(550 / (this.gameSpeed || 1))));
+      // 덱에서 보충받아 손패가 복구되었으므로 바닥패 짝수 유지를 위해 남은 손패를 이어서 내도록 재호출
+      return this.executeAITurn();
+    } else if (handResult.isJaPpeokEat) {
+      this.sound.playSpecial();
+      this.showBanner('💥 AI가 자뻑을 먹었습니다! (플레이어 피 2장 강탈!)', 1300);
+      await this.sleep(Math.max(180, Math.round(600 / (this.gameSpeed || 1))));
+    } else if (handResult.isTaPpeokEat) {
+      this.sound.playSpecial();
+      this.showBanner('🍽️ AI가 싼 패(뻑)를 먹었습니다! (플레이어 피 1장 강탈!)', 1200);
       await this.sleep(Math.max(150, Math.round(500 / (this.gameSpeed || 1))));
     }
 

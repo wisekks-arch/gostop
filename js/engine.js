@@ -14,6 +14,7 @@ class GoStopEngine {
     this.winner = null;
     this.firstTurn = true;
     this.bombFreeTurns = { player: 0, opponent: 0 }; // 폭탄 후 덱만 뒤집는 프리턴
+    this.ppeokOwners = {}; // 월별 뻑 발생자 기록 { [month]: 'player' | 'opponent' }
   }
 
   // 플레이어 인스턴스 팩토리
@@ -45,6 +46,7 @@ class GoStopEngine {
     this.firstTurn = true;
     this.turn = 'player';
     this.bombFreeTurns = { player: 0, opponent: 0 };
+    this.ppeokOwners = {};
 
     if (!this.player) this.player = this.createPlayerState('나 (플레이어)', false);
     if (!this.opponent) this.opponent = this.createPlayerState('타짜 AI', true);
@@ -181,6 +183,9 @@ class GoStopEngine {
   playHandCard(player, handCard, chosenFieldCard = null, isBomb = false) {
     let playedCards = [];
     let matchedFieldCards = [];
+    let isJaPpeokEat = false;
+    let isTaPpeokEat = false;
+    const ppeokStolenCards = [];
 
     if (isBomb) {
       // 폭탄: 손패의 같은 월 3장 모두 투입
@@ -203,15 +208,23 @@ class GoStopEngine {
         playedCards.push(handCard);
       }
 
-      // [정통 맞고 룰] 보너스패를 손에서 낸 경우: 즉시 피로 획득하고 상대 피 1장 강탈 후 덱 드로우 진행
+      // [정통 맞고 룰] 보너스패를 손에서 낸 경우:
+      // 즉시 피로 획득하고 상대 피 1장 강탈 후, 덱에서 손패 1장 즉시 보충 (바닥패 짝수 유지 및 손패 유지)
       if (handCard.type === CARD_TYPE.BONUS) {
         this.addCapturedCard(player, handCard);
         const stolen = this.stealPi(player);
+        let replenishmentCard = null;
+        if (this.deck.length > 0) {
+          replenishmentCard = this.deck.pop();
+          player.hand.push(replenishmentCard);
+          this.sortHand(player.hand);
+        }
         return {
-          step: 'bonusHand',
+          step: 'bonusHandReplenish',
           card: handCard,
+          replenishmentCard,
           stolen,
-          needDeckDraw: true
+          needAnotherHandPlay: true
         };
       }
 
@@ -229,9 +242,31 @@ class GoStopEngine {
         matchedFieldCards.push(target);
         this.field = this.field.filter(c => c.id !== target.id);
       } else if (matches.length === 3) {
-        // 3장 깔려있음 -> 3장 모두 먹기 (엉덩이 먹기)
+        // [정통 맞고 룰] 3장 깔려있음 -> 싼 패(뻑) 먹기
         matchedFieldCards.push(...matches);
         this.field = this.field.filter(c => c.month !== handCard.month);
+
+        const m = handCard.month;
+        const currentSide = player === this.player ? 'player' : 'opponent';
+        let ppeokStolenCount = 0;
+        if (this.ppeokOwners[m]) {
+          if (this.ppeokOwners[m] === currentSide) {
+            isJaPpeokEat = true; // 자뻑 먹기: 상대 피 2장 강탈!
+            ppeokStolenCount = 2;
+          } else {
+            isTaPpeokEat = true; // 타뻑(싼 패) 먹기: 상대 피 1장 강탈!
+            ppeokStolenCount = 1;
+          }
+          delete this.ppeokOwners[m];
+        } else {
+          isTaPpeokEat = true;
+          ppeokStolenCount = 1;
+        }
+
+        for (let i = 0; i < ppeokStolenCount; i++) {
+          const s = this.stealPi(player);
+          if (s) ppeokStolenCards.push(s);
+        }
       }
     }
 
@@ -239,7 +274,10 @@ class GoStopEngine {
       step: 'handPlayed',
       playedCards,
       matchedFieldCards,
-      isBomb
+      isBomb,
+      isJaPpeokEat,
+      isTaPpeokEat,
+      ppeokStolenCards
     };
   }
 
@@ -271,6 +309,9 @@ class GoStopEngine {
     let isJjok = false;
     let isTtadak = false;
     let isSseul = false;
+    let deckIsJaPpeokEat = false;
+    let deckIsTaPpeokEat = false;
+    let deckPpeokStolenCount = 0;
 
     const playedCards = (handResult && handResult.playedCards) ? handResult.playedCards : [];
     const matchedFieldCards = (handResult && handResult.matchedFieldCards) ? handResult.matchedFieldCards : [];
@@ -281,6 +322,8 @@ class GoStopEngine {
     if (!isBomb && handCard && matchedFieldCards.length === 1 && deckCard.month === handCard.month) {
       isPpeok = true;
       player.ppeokCount++;
+      // [정통 맞고 룰] 뻑 발생자(소유자) 기록
+      this.ppeokOwners[handCard.month] = player === this.player ? 'player' : 'opponent';
       // 매칭 취소! 바닥에 손패, 매칭패, 덱패 모두 남김
       this.field.push(handCard);
       this.field.push(matchedFieldCards[0]);
@@ -309,9 +352,25 @@ class GoStopEngine {
         deckMatchedFieldCards.push(target);
         this.field = this.field.filter(c => c.id !== target.id);
       } else if (deckMatches.length === 3) {
-        // 덱으로 바닥 3장 모두 먹기 (엉덩이 먹기)
+        // [정통 맞고 룰] 덱으로 바닥 3장 뻑 먹기
         deckMatchedFieldCards.push(...deckMatches);
         this.field = this.field.filter(c => c.month !== deckCard.month);
+
+        const dm = deckCard.month;
+        const currentSide = player === this.player ? 'player' : 'opponent';
+        if (this.ppeokOwners[dm]) {
+          if (this.ppeokOwners[dm] === currentSide) {
+            deckIsJaPpeokEat = true; // 자뻑 먹기 (상대 피 2장)
+            deckPpeokStolenCount = 2;
+          } else {
+            deckIsTaPpeokEat = true; // 타뻑 먹기 (상대 피 1장)
+            deckPpeokStolenCount = 1;
+          }
+          delete this.ppeokOwners[dm];
+        } else {
+          deckIsTaPpeokEat = true;
+          deckPpeokStolenCount = 1;
+        }
       }
     }
 
@@ -339,8 +398,8 @@ class GoStopEngine {
       }
     }
 
-    // 상대 피 강탈 계산: 쪽, 따닥, 쓸, 폭탄 각각 상대 피 1장씩 강탈
-    let stolenCount = 0;
+    // 상대 피 강탈 계산: 덱 뻑 먹기 + 쪽, 따닥, 쓸, 폭탄 각각 상대 피 1장씩 강탈
+    let stolenCount = deckPpeokStolenCount;
     if (isJjok) stolenCount++;
     if (isTtadak) stolenCount++;
     if (isSseul) stolenCount++;
@@ -357,6 +416,10 @@ class GoStopEngine {
     // 점수 재계산
     const currentScore = this.calculateScore(player);
 
+    const isJaPpeokEat = (handResult && handResult.isJaPpeokEat) || deckIsJaPpeokEat;
+    const isTaPpeokEat = (handResult && handResult.isTaPpeokEat) || deckIsTaPpeokEat;
+    const allStolenCards = [...((handResult && handResult.ppeokStolenCards) || []), ...stolenCards];
+
     return {
       step: 'turnFinished',
       deckCard,
@@ -367,7 +430,9 @@ class GoStopEngine {
       isTtadak,
       isSseul,
       isBomb,
-      stolenCards,
+      isJaPpeokEat,
+      isTaPpeokEat,
+      stolenCards: allStolenCards,
       currentScore
     };
   }
