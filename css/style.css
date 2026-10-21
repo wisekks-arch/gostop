@@ -4,8 +4,9 @@
    ============================================================ */
 
 :root {
-  --mat-bg-color: #17583d; /* 세련된 클래식 그린 벨벳 매트 */
-  --mat-inner-border: rgba(180, 240, 200, 0.2);
+  --mat-bg-color: #134b32;
+  /* 세련된 프리미엄 에메랄드 그린 */
+  --mat-inner-border: rgba(167, 243, 208, 0.3);
   --gold-accent: #ffd166;
   --gold-glow: rgba(255, 209, 102, 0.7);
   --red-accent: #e63946;
@@ -33,20 +34,20 @@ body {
   width: 100%;
   height: 100%;
   overflow: hidden;
-  background-color: #0d3222;
+  background-color: #0a1f15;
   font-family: var(--font-family);
   color: var(--text-light);
 }
 
-/* 메인 컨테이너 (세련된 클래식 에메랄드 & 포레스트 그린 펠트 매트) */
+/* 메인 컨테이너 (세련된 클래식 프리미엄 에메랄드 그린 벨벳 매트) */
 #game-app {
   position: relative;
   width: 100vw;
   height: 100vh;
   display: flex;
   flex-direction: column;
-  background: radial-gradient(circle at 50% 50%, #1f6d4d 0%, #144933 60%, #0d3222 100%);
-  box-shadow: inset 0 0 80px rgba(5, 25, 16, 0.45);
+  background: radial-gradient(circle at 50% 50%, #1e6f4a 0%, #134b32 55%, #09281a 100%);
+  box-shadow: inset 0 0 100px rgba(0, 0, 0, 0.6);
   overflow: hidden;
 }
 
@@ -272,16 +273,17 @@ body {
   border-radius: 10px;
 }
 
-/* 바닥패 보드 (국방부 담요 중앙 매트) */
+/* 바닥패 보드 (세련된 에메랄드 벨벳 중앙 매트) */
 .field-board {
   display: flex;
   flex-wrap: wrap;
   align-content: center;
   gap: 10px 14px;
   height: 100%;
-  background: rgba(18, 25, 14, 0.38);
+  background: radial-gradient(circle at 50% 50%, rgba(30, 110, 74, 0.55) 0%, rgba(14, 58, 39, 0.68) 100%);
   border-radius: 16px;
-  border: 1px dashed rgba(220, 215, 170, 0.25);
+  border: 1px dashed rgba(167, 243, 208, 0.4);
+  box-shadow: inset 0 2px 14px rgba(4, 25, 17, 0.45);
   padding: 8px 14px;
   overflow: visible;
 }
@@ -594,6 +596,7 @@ body {
    모바일 가로 모드 자동 강제 회전 (세로 접속 시에도 즉시 90도 가로 맞고판 렌더링)
    ============================================================ */
 @media screen and (orientation: portrait) {
+
   html,
   body {
     width: 100vw;
