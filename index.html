@@ -32,7 +32,8 @@
           턴</span>
       </div>
       <div class="util-buttons">
-        <button id="btn-speed" class="btn-icon" style="color: #ffd166; font-weight: 500;" title="게임 진행 속도 변경 (1x, 2x, 3x)">⚡ 속도 1x</button>
+        <button id="btn-speed" class="btn-icon" style="color: #ffd166; font-weight: 500;"
+          title="게임 진행 속도 변경 (1x, 2x, 3x)">⚡ 속도 1x</button>
         <button id="btn-kookjin-toggle" class="btn-icon" title="국진 열끗을 쌍피로 전환">🌸 국진: 열끗</button>
         <button id="btn-sound" class="btn-icon">🔊 소리 켬</button>
         <button id="btn-fullscreen" class="btn-icon">⛶ 전체화면</button>
@@ -42,7 +43,7 @@
 
     <!-- 게임 테이블 매트 -->
     <main class="game-table">
-      <!-- 1. 상대방(컴퓨터) 정보 & 획득패 영역 -->
+      <!-- 1. 상대방(컴퓨터) 정보 & 손패 & 획득패 영역 -->
       <section class="opponent-row">
         <!-- 상대방 프로필 -->
         <div class="profile-card">
@@ -58,22 +59,39 @@
           </div>
         </div>
 
-        <!-- 상대방 획득패 (광 / 열 / 띠 / 피) -->
-        <div class="captured-panel" id="opp-captured">
-          <div class="captured-group">
-            <span class="group-title">광 (<span id="opp-cnt-kwang">0</span>)</span>
+        <!-- 상대방 손패 (뒷면 카드 10장~0장 실시간 시각화) -->
+        <div class="opp-hand-container" id="opp-hand" title="상대방 남은 손패">
+          <!-- 상대 손패 뒷면 미니 카드 동적 렌더링 -->
+        </div>
+
+        <!-- 상대방 획득패 (광 / 열 / 띠 / 피 + 족보 현황 배지) -->
+        <div class="captured-panel" id="opp-captured" title="터치하여 상세 보기">
+          <div class="captured-group" data-group="kwang">
+            <div class="group-header">
+              <span class="group-title">광 (<span id="opp-cnt-kwang">0</span>)</span>
+              <span class="group-chip" id="opp-chip-kwang"></span>
+            </div>
             <div class="group-cards" id="opp-cap-kwang"></div>
           </div>
-          <div class="captured-group">
-            <span class="group-title">열 (<span id="opp-cnt-ten">0</span>)</span>
+          <div class="captured-group" data-group="ten">
+            <div class="group-header">
+              <span class="group-title">열 (<span id="opp-cnt-ten">0</span>)</span>
+              <span class="group-chip" id="opp-chip-ten"></span>
+            </div>
             <div class="group-cards" id="opp-cap-ten"></div>
           </div>
-          <div class="captured-group">
-            <span class="group-title">띠 (<span id="opp-cnt-rib">0</span>)</span>
+          <div class="captured-group" data-group="rib">
+            <div class="group-header">
+              <span class="group-title">띠 (<span id="opp-cnt-rib">0</span>)</span>
+              <span class="group-chip" id="opp-chip-rib"></span>
+            </div>
             <div class="group-cards" id="opp-cap-rib"></div>
           </div>
-          <div class="captured-group">
-            <span class="group-title">피 (<span id="opp-cnt-pi">0</span>)</span>
+          <div class="captured-group" data-group="pi">
+            <div class="group-header">
+              <span class="group-title">피 (<span id="opp-cnt-pi">0</span>)</span>
+              <span class="group-chip" id="opp-chip-pi"></span>
+            </div>
             <div class="group-cards" id="opp-cap-pi"></div>
           </div>
         </div>
@@ -95,41 +113,53 @@
         </div>
       </section>
 
-      <!-- 3. 하단 플레이어: 내 획득패 + 내 프로필 + 내 손패(10장) -->
+      <!-- 3. 하단 플레이어: 내 프로필 + 내 획득패 + 내 손패(10장) -->
       <section class="player-row">
         <div class="player-status-bar">
-          <!-- 내 획득패 (광 / 열 / 띠 / 피) -->
-          <div class="captured-panel" id="player-captured">
-            <div class="captured-group">
-              <span class="group-title">광 (<span id="player-cnt-kwang">0</span>)</span>
-              <div class="group-cards" id="player-cap-kwang"></div>
-            </div>
-            <div class="captured-group">
-              <span class="group-title">열 (<span id="player-cnt-ten">0</span>)</span>
-              <div class="group-cards" id="player-cap-ten"></div>
-            </div>
-            <div class="captured-group">
-              <span class="group-title">띠 (<span id="player-cnt-rib">0</span>)</span>
-              <div class="group-cards" id="player-cap-rib"></div>
-            </div>
-            <div class="captured-group">
-              <span class="group-title">피 (<span id="player-cnt-pi">0</span>)</span>
-              <div class="group-cards" id="player-cap-pi"></div>
-            </div>
-          </div>
-
-          <!-- 내 프로필 & 점수 & 흔들기/폭탄 여부 -->
+          <!-- 내 프로필 & 점수 (좌측 배치로 덱과의 겹침 방지) -->
           <div class="profile-card">
-            <div class="score-badge">
-              <div class="score-val" id="player-score">0</div>
-              <div class="score-lbl">점수</div>
-            </div>
+            <div class="profile-avatar" style="background: linear-gradient(135deg, #1d3557, #457b9d);">🧑</div>
             <div class="profile-info">
               <span class="profile-name">나 (플레이어) <span id="player-status-badge"
                   style="font-size: 10px; color: #ffd166;"></span></span>
               <span class="profile-money" id="player-money">100,000원</span>
             </div>
-            <div class="profile-avatar" style="background: linear-gradient(135deg, #1d3557, #457b9d);">🧑</div>
+            <div class="score-badge">
+              <div class="score-val" id="player-score">0</div>
+              <div class="score-lbl">점수</div>
+            </div>
+          </div>
+
+          <!-- 내 획득패 (광 / 열 / 띠 / 피 + 족보 현황 배지) -->
+          <div class="captured-panel" id="player-captured" title="터치하여 상세 보기">
+            <div class="captured-group" data-group="kwang">
+              <div class="group-header">
+                <span class="group-title">광 (<span id="player-cnt-kwang">0</span>)</span>
+                <span class="group-chip" id="player-chip-kwang"></span>
+              </div>
+              <div class="group-cards" id="player-cap-kwang"></div>
+            </div>
+            <div class="captured-group" data-group="ten">
+              <div class="group-header">
+                <span class="group-title">열 (<span id="player-cnt-ten">0</span>)</span>
+                <span class="group-chip" id="player-chip-ten"></span>
+              </div>
+              <div class="group-cards" id="player-cap-ten"></div>
+            </div>
+            <div class="captured-group" data-group="rib">
+              <div class="group-header">
+                <span class="group-title">띠 (<span id="player-cnt-rib">0</span>)</span>
+                <span class="group-chip" id="player-chip-rib"></span>
+              </div>
+              <div class="group-cards" id="player-cap-rib"></div>
+            </div>
+            <div class="captured-group" data-group="pi">
+              <div class="group-header">
+                <span class="group-title">피 (<span id="player-cnt-pi">0</span>)</span>
+                <span class="group-chip" id="player-chip-pi"></span>
+              </div>
+              <div class="group-cards" id="player-cap-pi"></div>
+            </div>
           </div>
         </div>
 
@@ -192,6 +222,20 @@
             (2배)</button>
           <button id="btn-skip-shake" class="btn-gostop btn-stop" style="font-size: 17px; padding: 10px 24px;">그냥
             진행</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 5: 획득패 확대 상세 보기 모달 (모바일 최적화) -->
+    <div class="modal-overlay" id="modal-captured-detail">
+      <div class="modal-box captured-detail-box">
+        <div class="captured-detail-header">
+          <h2 class="modal-title" id="cap-detail-title">🎴 획득패 상세 보기</h2>
+          <button id="btn-close-cap-detail" class="btn-icon" style="padding: 4px 10px; font-size: 14px;">✕ 닫기</button>
+        </div>
+        <p class="modal-desc" id="cap-detail-summary" style="font-size: 13px; color: #ffd166; margin: 4px 0 10px;"></p>
+        <div class="captured-detail-cards" id="cap-detail-cards-list">
+          <!-- 획득한 카드들이 큰 크기로 나열됨 -->
         </div>
       </div>
     </div>

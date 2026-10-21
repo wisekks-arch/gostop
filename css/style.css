@@ -191,40 +191,132 @@ body {
   opacity: 0.85;
 }
 
-/* 획득패 영역 (광 / 열 / 띠 / 피) */
+/* 상대방 손패 컨테이너 (실시간 잔여 손패 시각화) */
+.opp-hand-container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  max-width: 220px;
+  height: 44px;
+  padding: 0 4px;
+}
+
+.opp-mini-card {
+  width: 22px;
+  height: 36px;
+  margin-left: -10px;
+  border-radius: 3px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.45);
+  overflow: hidden;
+  flex-shrink: 0;
+  background-color: #18181b;
+}
+
+.opp-mini-card:first-child {
+  margin-left: 0;
+}
+
+.opp-mini-card svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* 획득패 영역 (광 / 열 / 띠 / 피 + 족보 현황 배지) */
 .captured-panel {
   display: flex;
-  gap: 8px;
-  background: rgba(0, 0, 0, 0.35);
-  padding: 4px 8px;
+  gap: 5px;
+  background: rgba(8, 30, 20, 0.85);
+  padding: 3px 6px;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(167, 243, 208, 0.35);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.captured-panel:hover {
+  background: rgba(12, 45, 30, 0.95);
+  border-color: var(--gold-accent);
 }
 
 .captured-group {
   display: flex;
   flex-direction: column;
   align-items: center;
-  width: 54px;
+  min-width: 46px;
+  padding: 1px 2px;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.25);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 1px 2px;
+  gap: 2px;
 }
 
 .group-title {
   font-size: 10px;
   color: #ffd166;
-  font-weight: bold;
-  margin-bottom: 2px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.group-chip {
+  font-size: 8.5px;
+  font-weight: 800;
+  padding: 1px 3px;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  letter-spacing: -0.2px;
+  display: none;
+}
+
+.group-chip.active {
+  display: inline-block;
+}
+
+.group-chip.godori {
+  background: #f59e0b;
+  color: #000;
+}
+
+.group-chip.hongdan {
+  background: #ef4444;
+  color: #fff;
+}
+
+.group-chip.cheongdan {
+  background: #3b82f6;
+  color: #fff;
+}
+
+.group-chip.chodan {
+  background: #10b981;
+  color: #fff;
+}
+
+.group-chip.kwang {
+  background: #fbbf24;
+  color: #78350f;
 }
 
 .group-cards {
   position: relative;
-  width: 50px;
-  height: 52px;
+  width: 44px;
+  height: 44px;
 }
 
 .mini-card {
   position: absolute;
-  width: 33px;
-  height: 52px;
+  width: 28px;
+  height: 44px;
   border-radius: 3px;
   background-color: transparent;
   overflow: hidden;
@@ -551,6 +643,43 @@ body {
   color: var(--gold-accent);
 }
 
+/* 획득패 확대 상세 모달 (모바일 갤러리 뷰) */
+.captured-detail-box {
+  max-width: 90vw;
+  width: 520px;
+  max-height: 85vh;
+  display: flex;
+  flex-direction: column;
+  background: linear-gradient(145deg, #134432, #082117);
+  border: 2px solid var(--gold-accent);
+}
+
+.captured-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.15);
+  padding-bottom: 8px;
+}
+
+.captured-detail-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: center;
+  align-content: flex-start;
+  overflow-y: auto;
+  max-height: 50vh;
+  padding: 10px 4px;
+}
+
+.captured-detail-cards .hwatu-card-wrap {
+  width: 54px;
+  height: 92px;
+  flex-shrink: 0;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+}
+
 /* 특수 이펙트 배너 (쪽! 따닥! 뻑! 쓸! 폭탄!) */
 #effect-banner {
   position: absolute;
@@ -589,6 +718,61 @@ body {
   100% {
     transform: translate(-50%, -50%) scale(1.4);
     opacity: 0;
+  }
+}
+
+/* ============================================================
+   모바일 가로 모드 저해상도 높이 최적화 (스마트폰 360~440px 화면)
+   ============================================================ */
+@media screen and (max-height: 440px) {
+  :root {
+    --card-w: 50px;
+    --card-h: 85px;
+  }
+
+  .game-table {
+    padding: 26px 8px 2px 8px;
+    gap: 2px;
+  }
+
+  .player-hand-container {
+    height: 90px;
+    gap: 4px;
+  }
+
+  .field-board {
+    padding: 4px 8px;
+    gap: 4px 8px;
+  }
+
+  .profile-card {
+    padding: 2px 8px;
+    gap: 6px;
+  }
+
+  .profile-avatar {
+    width: 30px;
+    height: 30px;
+    font-size: 14px;
+  }
+
+  .score-badge {
+    padding: 2px 6px;
+    min-width: 42px;
+  }
+
+  .score-badge .score-val {
+    font-size: 14px;
+  }
+
+  .group-cards {
+    width: 40px;
+    height: 40px;
+  }
+
+  .mini-card {
+    width: 26px;
+    height: 40px;
   }
 }
 

@@ -31,6 +31,8 @@ class GoStopApp {
       oppMoney: document.getElementById('opp-money'),
       oppScore: document.getElementById('opp-score'),
       oppStatusBadge: document.getElementById('opp-status-badge'),
+      oppHand: document.getElementById('opp-hand'),
+      oppCaptured: document.getElementById('opp-captured'),
       oppCapKwang: document.getElementById('opp-cap-kwang'),
       oppCapTen: document.getElementById('opp-cap-ten'),
       oppCapRib: document.getElementById('opp-cap-rib'),
@@ -39,6 +41,10 @@ class GoStopApp {
       oppCntTen: document.getElementById('opp-cnt-ten'),
       oppCntRib: document.getElementById('opp-cnt-rib'),
       oppCntPi: document.getElementById('opp-cnt-pi'),
+      oppChipKwang: document.getElementById('opp-chip-kwang'),
+      oppChipTen: document.getElementById('opp-chip-ten'),
+      oppChipRib: document.getElementById('opp-chip-rib'),
+      oppChipPi: document.getElementById('opp-chip-pi'),
 
       // 필드 & 덱
       fieldBoard: document.getElementById('field-board'),
@@ -50,6 +56,7 @@ class GoStopApp {
       playerScore: document.getElementById('player-score'),
       playerStatusBadge: document.getElementById('player-status-badge'),
       playerHand: document.getElementById('player-hand'),
+      playerCaptured: document.getElementById('player-captured'),
       playerCapKwang: document.getElementById('player-cap-kwang'),
       playerCapTen: document.getElementById('player-cap-ten'),
       playerCapRib: document.getElementById('player-cap-rib'),
@@ -58,6 +65,10 @@ class GoStopApp {
       playerCntTen: document.getElementById('player-cnt-ten'),
       playerCntRib: document.getElementById('player-cnt-rib'),
       playerCntPi: document.getElementById('player-cnt-pi'),
+      playerChipKwang: document.getElementById('player-chip-kwang'),
+      playerChipTen: document.getElementById('player-chip-ten'),
+      playerChipRib: document.getElementById('player-chip-rib'),
+      playerChipPi: document.getElementById('player-chip-pi'),
 
       // 이펙트 & 모달
       effectBanner: document.getElementById('effect-banner'),
@@ -80,7 +91,14 @@ class GoStopApp {
       modalShake: document.getElementById('modal-shake'),
       shakeDesc: document.getElementById('shake-desc'),
       btnDoShake: document.getElementById('btn-do-shake'),
-      btnSkipShake: document.getElementById('btn-skip-shake')
+      btnSkipShake: document.getElementById('btn-skip-shake'),
+
+      // 획득패 확대 모달
+      modalCapDetail: document.getElementById('modal-captured-detail'),
+      capDetailTitle: document.getElementById('cap-detail-title'),
+      capDetailSummary: document.getElementById('cap-detail-summary'),
+      capDetailCardsList: document.getElementById('cap-detail-cards-list'),
+      btnCloseCapDetail: document.getElementById('btn-close-cap-detail')
     };
   }
 
@@ -159,6 +177,37 @@ class GoStopApp {
       this.dom.modalResult.classList.remove('active');
       this.startNewGame();
     });
+
+    // 7. 획득패 클릭 시 상세 모달 열기 (모바일에서 큰 카드로 보기)
+    if (this.dom.oppCaptured) {
+      this.dom.oppCaptured.addEventListener('click', (e) => {
+        const groupEl = e.target.closest('.captured-group');
+        const groupType = groupEl ? groupEl.dataset.group : 'all';
+        this.openCapturedDetail(this.engine.opponent, '상대방(AI)', groupType);
+      });
+    }
+
+    if (this.dom.playerCaptured) {
+      this.dom.playerCaptured.addEventListener('click', (e) => {
+        const groupEl = e.target.closest('.captured-group');
+        const groupType = groupEl ? groupEl.dataset.group : 'all';
+        this.openCapturedDetail(this.engine.player, '나(플레이어)', groupType);
+      });
+    }
+
+    // 8. 획득패 상세 모달 닫기
+    if (this.dom.btnCloseCapDetail) {
+      this.dom.btnCloseCapDetail.addEventListener('click', () => {
+        this.dom.modalCapDetail.classList.remove('active');
+      });
+    }
+    if (this.dom.modalCapDetail) {
+      this.dom.modalCapDetail.addEventListener('click', (e) => {
+        if (e.target === this.dom.modalCapDetail) {
+          this.dom.modalCapDetail.classList.remove('active');
+        }
+      });
+    }
   }
 
   updateSpeedButton() {
@@ -277,10 +326,28 @@ class GoStopApp {
     this.dom.oppCntRib.textContent = opp.captured.rib.length;
     this.dom.oppCntPi.textContent = oppScoreObj.piCount;
 
+    // 상대방 손패 시각화 (뒷면 카드 10장~0장)
+    this.renderOpponentHand(opp.hand.length);
+
+    // 상대방 족보 현황 실시간 칩 업데이트
+    this.updateCapturedChips(opp, 'opp', oppScoreObj);
+
     this.renderMiniCardStack(this.dom.oppCapKwang, opp.captured.kwang);
     this.renderMiniCardStack(this.dom.oppCapTen, opp.captured.ten);
     this.renderMiniCardStack(this.dom.oppCapRib, opp.captured.rib);
     this.renderMiniCardStack(this.dom.oppCapPi, opp.captured.pi);
+  }
+
+  // 상대방 손패 렌더링 (잔여 카드 장수 실시간 표시)
+  renderOpponentHand(cardCount) {
+    if (!this.dom.oppHand) return;
+    this.dom.oppHand.innerHTML = '';
+    for (let i = 0; i < cardCount; i++) {
+      const cardEl = document.createElement('div');
+      cardEl.className = 'opp-mini-card';
+      cardEl.innerHTML = renderCardSVG(null, true);
+      this.dom.oppHand.appendChild(cardEl);
+    }
   }
 
   renderPlayerCaptured() {
@@ -295,10 +362,158 @@ class GoStopApp {
     this.dom.playerCntRib.textContent = player.captured.rib.length;
     this.dom.playerCntPi.textContent = pScoreObj.piCount;
 
+    // 내 족보 현황 실시간 칩 업데이트
+    this.updateCapturedChips(player, 'player', pScoreObj);
+
     this.renderMiniCardStack(this.dom.playerCapKwang, player.captured.kwang);
     this.renderMiniCardStack(this.dom.playerCapTen, player.captured.ten);
     this.renderMiniCardStack(this.dom.playerCapRib, player.captured.rib);
     this.renderMiniCardStack(this.dom.playerCapPi, player.captured.pi);
+  }
+
+  // 핵심 족보(광, 고도리, 단, 피) 현황 칩 갱신
+  updateCapturedChips(participant, prefix, scoreObj) {
+    // 1. 광 칩
+    const chipKwang = this.dom[`${prefix}ChipKwang`];
+    if (chipKwang) {
+      const kCount = participant.captured.kwang.length;
+      chipKwang.className = 'group-chip';
+      if (kCount >= 5) {
+        chipKwang.textContent = '☀️오광';
+        chipKwang.classList.add('active', 'kwang');
+      } else if (kCount === 4) {
+        chipKwang.textContent = '☀️사광';
+        chipKwang.classList.add('active', 'kwang');
+      } else if (kCount === 3) {
+        const hasBi = participant.captured.kwang.some(c => c.isBiKwang);
+        chipKwang.textContent = hasBi ? '☀️일광' : '☀️삼광';
+        chipKwang.classList.add('active', 'kwang');
+      } else if (kCount > 0) {
+        chipKwang.textContent = `☀️${kCount}`;
+        chipKwang.classList.add('active');
+      } else {
+        chipKwang.textContent = '';
+      }
+    }
+
+    // 2. 열끗 / 고도리 칩
+    const chipTen = this.dom[`${prefix}ChipTen`];
+    if (chipTen) {
+      chipTen.className = 'group-chip';
+      const godoriCount = participant.captured.ten.filter(c => c.godori).length;
+      if (godoriCount === 3) {
+        chipTen.textContent = '🐦고도리!';
+        chipTen.classList.add('active', 'godori');
+      } else if (godoriCount === 2) {
+        chipTen.textContent = '🐦2/3';
+        chipTen.classList.add('active', 'godori');
+      } else if (godoriCount === 1) {
+        chipTen.textContent = '🐦1/3';
+        chipTen.classList.add('active');
+      } else if (participant.captured.ten.length >= 5) {
+        chipTen.textContent = `${participant.captured.ten.length - 4}점`;
+        chipTen.classList.add('active');
+      } else {
+        chipTen.textContent = '';
+      }
+    }
+
+    // 3. 띠 (홍단 / 청단 / 초단) 칩
+    const chipRib = this.dom[`${prefix}ChipRib`];
+    if (chipRib) {
+      chipRib.className = 'group-chip';
+      const ribs = participant.captured.rib;
+      const hongCount = ribs.filter(c => c.rib === RIB_TYPE.HONG).length;
+      const cheongCount = ribs.filter(c => c.rib === RIB_TYPE.CHEONG).length;
+      const choCount = ribs.filter(c => c.rib === RIB_TYPE.CHO).length;
+
+      if (hongCount === 3) {
+        chipRib.textContent = '🔴홍단!';
+        chipRib.classList.add('active', 'hongdan');
+      } else if (cheongCount === 3) {
+        chipRib.textContent = '🔵청단!';
+        chipRib.classList.add('active', 'cheongdan');
+      } else if (choCount === 3) {
+        chipRib.textContent = '🟢초단!';
+        chipRib.classList.add('active', 'chodan');
+      } else if (hongCount === 2) {
+        chipRib.textContent = '🔴홍2';
+        chipRib.classList.add('active', 'hongdan');
+      } else if (cheongCount === 2) {
+        chipRib.textContent = '🔵청2';
+        chipRib.classList.add('active', 'cheongdan');
+      } else if (choCount === 2) {
+        chipRib.textContent = '🟢초2';
+        chipRib.classList.add('active', 'chodan');
+      } else if (ribs.length >= 5) {
+        chipRib.textContent = `${ribs.length - 4}점`;
+        chipRib.classList.add('active');
+      } else {
+        chipRib.textContent = '';
+      }
+    }
+
+    // 4. 피 칩
+    const chipPi = this.dom[`${prefix}ChipPi`];
+    if (chipPi) {
+      chipPi.className = 'group-chip';
+      const piCount = scoreObj.piCount;
+      if (piCount >= 10) {
+        chipPi.textContent = `🔥${piCount - 9}점`;
+        chipPi.classList.add('active');
+      } else if (piCount >= 7) {
+        chipPi.textContent = `${piCount}피`;
+        chipPi.classList.add('active');
+      } else {
+        chipPi.textContent = '';
+      }
+    }
+  }
+
+  // 획득패 확대 모달 표시 (모바일 화면 터치 시)
+  openCapturedDetail(participant, participantName, groupType = 'all') {
+    if (!this.dom.modalCapDetail) return;
+
+    this.sound.playCardSnap();
+    const groupNameMap = {
+      kwang: '광(光)',
+      ten: '열끗(動物)',
+      rib: '띠(短冊)',
+      pi: '피(皮)',
+      all: '전체 획득패'
+    };
+
+    const targetTitle = groupNameMap[groupType] || '전체 획득패';
+    this.dom.capDetailTitle.textContent = `🎴 ${participantName}의 ${targetTitle}`;
+
+    let cardsToShow = [];
+    if (groupType === 'all') {
+      cardsToShow = [
+        ...participant.captured.kwang,
+        ...participant.captured.ten,
+        ...participant.captured.rib,
+        ...participant.captured.pi
+      ];
+    } else if (participant.captured[groupType]) {
+      cardsToShow = participant.captured[groupType];
+    }
+
+    const scoreObj = this.engine.calculateScore(participant);
+    this.dom.capDetailSummary.textContent = `총 ${cardsToShow.length}장 획득 (현재 총 ${scoreObj.total}점, 피 ${scoreObj.piCount}장)`;
+
+    this.dom.capDetailCardsList.innerHTML = '';
+    if (cardsToShow.length === 0) {
+      this.dom.capDetailCardsList.innerHTML = '<div style="color:#aaa; font-size:14px; padding:20px;">획득한 카드가 없습니다.</div>';
+    } else {
+      cardsToShow.forEach(card => {
+        const wrap = document.createElement('div');
+        wrap.className = 'hwatu-card-wrap';
+        wrap.innerHTML = renderCardSVG(card, false);
+        this.dom.capDetailCardsList.appendChild(wrap);
+      });
+    }
+
+    this.dom.modalCapDetail.classList.add('active');
   }
 
   // 획득패 미니 스택 렌더링
