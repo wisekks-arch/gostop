@@ -1,37 +1,32 @@
 /**
- * 천하제일 맞고전 10단계 고수 인공지능 (AI) 엔진
- * 10~8단 초보 / 7~4단 중수 / 3~1단 전설의 타짜 차등 지능 알고리즘
+ * 맞고 상대방(컴퓨터) 인공지능 모듈
+ * 전략적 가치 평가 알고리즘 기반 패 선택 및 고/스톱 판단
  */
 
-class ChunhaGoStopAI {
+class GoStopAI {
   constructor(engine) {
     this.engine = engine;
   }
 
   /**
-   * AI의 손패 선택 (단계별 알고리즘 분기)
+   * AI의 손패 선택 전략
    * @param {Object} aiPlayer AI 플레이어 상태
-   * @param {Object} masterInfo 현재 도전 중인 고수 메타데이터
+   * @returns {Object} { card, chosenFieldCard, isBomb }
    */
-  decideHandCard(aiPlayer, masterInfo = null) {
+  decideHandCard(aiPlayer) {
     const hand = aiPlayer.hand;
     if (hand.length === 0) return null;
-
-    const dan = masterInfo ? masterInfo.dan : 10;
-    const difficulty = masterInfo ? masterInfo.difficulty : 'beginner';
 
     // 1. 폭탄 가능 여부 확인
     const bombMonths = this.engine.getBombableMonths(aiPlayer);
     if (bombMonths.length > 0) {
-      if (difficulty !== 'beginner' || Math.random() < 0.8) {
-        const bombMonth = bombMonths[0];
-        const bombCard = hand.find(c => c.month === bombMonth);
-        return {
-          card: bombCard,
-          chosenFieldCard: null,
-          isBomb: true
-        };
-      }
+      const bombMonth = bombMonths[0];
+      const bombCard = hand.find(c => c.month === bombMonth);
+      return {
+        card: bombCard,
+        chosenFieldCard: null,
+        isBomb: true
+      };
     }
 
     // 2. 보너스패가 손에 있다면 즉시 출도
@@ -40,23 +35,9 @@ class ChunhaGoStopAI {
       return { card: bonusCard, chosenFieldCard: null, isBomb: false };
     }
 
-    // 3. 초보 난이도 (10단 ~ 8단): 25% 확률로 아무 생각 없이 랜덤 패 출도
-    if (difficulty === 'beginner' && Math.random() < 0.25) {
-      const randomCard = hand[Math.floor(Math.random() * hand.length)];
-      const matches = this.engine.getFieldMatches(randomCard.month);
-      return {
-        card: randomCard,
-        chosenFieldCard: matches.length > 0 ? matches[0] : null,
-        isBomb: false
-      };
-    }
-
-    // 4. 중수 (7단~4단) 및 고수/타짜 (3단~1단) 정밀 가치 평가
+    // 3. 각 손패별 가치 평가 점수 매기기
     let bestChoice = null;
-    let highestScore = -999999;
-
-    const opponent = this.engine.player; // 유저 플레이어
-    const opponentScore = this.engine.calculateScore(opponent);
+    let highestScore = -9999;
 
     for (const card of hand) {
       const matches = this.engine.getFieldMatches(card.month);
@@ -64,33 +45,25 @@ class ChunhaGoStopAI {
       let chosenFieldCard = null;
 
       if (matches.length === 0) {
-        matchScore = -this.evaluateDiscardDanger(card, difficulty, opponent);
+        // 바닥에 먹을 게 없음: 버릴 때의 패 손실 점수 (낮을수록 안전하게 버림)
+        matchScore = -this.evaluateDiscardDanger(card);
       } else if (matches.length === 1) {
-        matchScore = this.evaluateCardValue(card, difficulty) + this.evaluateCardValue(matches[0], difficulty) + 60;
+        // 1장 먹기
+        matchScore = this.evaluateCardValue(card) + this.evaluateCardValue(matches[0]) + 50;
       } else if (matches.length === 2) {
-        const val0 = this.evaluateCardValue(matches[0], difficulty);
-        const val1 = this.evaluateCardValue(matches[1], difficulty);
+        // 2장 중 1장 선택 먹기: 더 좋은 패를 선택
+        const val0 = this.evaluateCardValue(matches[0]);
+        const val1 = this.evaluateCardValue(matches[1]);
         if (val0 >= val1) {
           chosenFieldCard = matches[0];
-          matchScore = this.evaluateCardValue(card, difficulty) + val0 + 70;
+          matchScore = this.evaluateCardValue(card) + val0 + 60;
         } else {
           chosenFieldCard = matches[1];
-          matchScore = this.evaluateCardValue(card, difficulty) + val1 + 70;
+          matchScore = this.evaluateCardValue(card) + val1 + 60;
         }
       } else if (matches.length === 3) {
-        matchScore = 300 + this.evaluateCardValue(card, difficulty);
-      }
-
-      // 타짜(1단~3단) 특수 가중치
-      if (difficulty === 'expert') {
-        if (opponent.captured.kwang.length >= 2 && card.isKwang) {
-          matchScore += 120;
-        }
-        if (opponentScore.piCount >= 5 && opponentScore.piCount <= 7) {
-          if (card.type === CARD_TYPE.PI || card.canBeDoublePi) {
-            matchScore += 80;
-          }
-        }
+        // 뻑 먹기 (3장 몽땅 먹기) -> 최우선
+        matchScore = 200 + this.evaluateCardValue(card);
       }
 
       if (matchScore > highestScore) {
@@ -106,78 +79,72 @@ class ChunhaGoStopAI {
     return bestChoice || { card: hand[0], chosenFieldCard: null, isBomb: false };
   }
 
-  // 덱 뒤집은 패 매칭 시 선택
-  decideDeckFieldChoice(deckCard, matchedTwoCards, masterInfo = null) {
-    const difficulty = masterInfo ? masterInfo.difficulty : 'beginner';
-    const val0 = this.evaluateCardValue(matchedTwoCards[0], difficulty);
-    const val1 = this.evaluateCardValue(matchedTwoCards[1], difficulty);
+  /**
+   * 덱에서 뒤집은 패가 바닥 2장과 매칭될 때 AI의 선택
+   */
+  decideDeckFieldChoice(deckCard, matchedTwoCards) {
+    const val0 = this.evaluateCardValue(matchedTwoCards[0]);
+    const val1 = this.evaluateCardValue(matchedTwoCards[1]);
     return val0 >= val1 ? matchedTwoCards[0] : matchedTwoCards[1];
   }
 
-  evaluateCardValue(card, difficulty = 'beginner') {
+  /**
+   * 카드의 단일 가치 점수 평가
+   */
+  evaluateCardValue(card) {
     if (!card) return 0;
-    let base = 15;
-    if (card.isKwang) base = 100;
-    else if (card.godori) base = 85;
-    else if (card.rib === RIB_TYPE.HONG || card.rib === RIB_TYPE.CHEONG || card.rib === RIB_TYPE.CHO) base = 65;
-    else if (card.canBeDoublePi || (card.piValue && card.piValue >= 2)) base = 55;
-    else if (card.type === CARD_TYPE.TEN) base = 40;
-    else if (card.type === CARD_TYPE.RIB) base = 30;
-
-    if (difficulty === 'expert') {
-      if (card.isKwang) base += 30;
-      if (card.piValue >= 2 || card.canBeDoublePi) base += 25;
-    }
-    return base;
+    if (card.isKwang) return 100; // 광 최고
+    if (card.godori) return 85;   // 고도리
+    if (card.rib === RIB_TYPE.HONG || card.rib === RIB_TYPE.CHEONG || card.rib === RIB_TYPE.CHO) return 60; // 3대 단
+    if (card.canBeDoublePi || (card.piValue && card.piValue >= 2)) return 50; // 쌍피
+    if (card.type === CARD_TYPE.TEN) return 40; // 일반 열끗
+    if (card.type === CARD_TYPE.RIB) return 30; // 일반 띠
+    return 15; // 일반 피
   }
 
-  evaluateDiscardDanger(card, difficulty, opponent) {
-    let danger = 10;
-    if (card.isKwang) danger += 120;
-    if (card.godori) danger += 90;
-    if (card.canBeDoublePi || (card.piValue && card.piValue >= 2)) danger += 60;
-    if (card.type === CARD_TYPE.TEN) danger += 40;
-    if (card.type === CARD_TYPE.RIB) danger += 25;
-    if (card.type === CARD_TYPE.PI) danger = 5;
-
-    if (difficulty === 'expert') {
-      if (card.isKwang && opponent.captured.kwang.length >= 2) danger += 200;
-      if (card.godori && opponent.captured.ten.filter(c => c.godori).length >= 1) danger += 150;
-    }
-
+  /**
+   * 패를 버릴 때 상대방에게 유리한 패를 주지 않기 위한 위험도 평가
+   */
+  evaluateDiscardDanger(card) {
+    let danger = 0;
+    if (card.isKwang) danger += 80;
+    if (card.godori) danger += 60;
+    if (card.canBeDoublePi || (card.piValue && card.piValue >= 2)) danger += 40;
+    if (card.type === CARD_TYPE.TEN) danger += 30;
+    if (card.type === CARD_TYPE.RIB) danger += 20;
+    if (card.type === CARD_TYPE.PI) danger += 5; // 피를 버리는 것이 가장 안전
     return danger;
   }
 
-  decideGoOrStop(aiPlayer, currentScoreObj, masterInfo = null) {
-    const difficulty = masterInfo ? masterInfo.difficulty : 'beginner';
+  /**
+   * 고 / 스톱 결정
+   * @param {Object} aiPlayer AI 플레이어
+   * @param {Object} currentScoreObj 현재 계산된 점수 객체
+   * @returns {boolean} true: 고, false: 스톱
+   */
+  decideGoOrStop(aiPlayer, currentScoreObj) {
     const opponent = this.engine.player;
     const opponentScore = this.engine.calculateScore(opponent).total;
     const currentScore = currentScoreObj.total;
 
-    if (difficulty === 'beginner') {
-      return false; // 7점 즉시 스톱
-    }
-
-    if (difficulty === 'intermediate') {
-      if (aiPlayer.goCount >= 2) return false;
-      if (opponentScore >= 4) return false;
-      if (aiPlayer.hand.length >= 3 && aiPlayer.goCount === 0) return true;
+    // 이미 3고 이상이면 무조건 스톱으로 안전하게 굳힘
+    if (aiPlayer.goCount >= 2) {
       return false;
     }
 
-    // expert (타짜)
-    if (opponent.goCount > 0) {
-      if (currentScore >= 7) return false; // 고박 승리
+    // 상대방이 점수가 4점 이상이거나 획득패가 많아서 언제든 날 수 있다면 스톱
+    if (opponentScore >= 4 || opponent.captured.pi.length >= 8) {
+      return false;
     }
 
-    if (aiPlayer.hand.length >= 3 && aiPlayer.goCount < 2) {
-      const oppPi = this.engine.calculateScore(opponent).piCount;
-      if (oppPi <= 6) return true;
+    // 내 손패가 3장 이상 넉넉히 남아있고 점수가 10점 미만이면 추가 득점을 위해 1고 시도
+    if (aiPlayer.hand.length >= 3 && aiPlayer.goCount === 0) {
+      return true; // 1고
     }
 
-    return false;
+    return false; // 기본은 안전하게 스톱
   }
 }
 
-window.ChunhaGoStopAI = ChunhaGoStopAI;
-window.goStopAI = new ChunhaGoStopAI(window.goStopEngine);
+// 싱글톤 전역 노출
+window.goStopAI = new GoStopAI(window.goStopEngine);
