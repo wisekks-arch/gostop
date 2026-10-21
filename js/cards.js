@@ -20,80 +20,80 @@ const RIB_TYPE = {
   NONE: 'none'      // 일반 띠 (비띠 등)
 };
 
-// 48장 + 보너스 2장 카드 목록 (스프라이트 행/열 좌표 매핑 포함)
-// col: 0~11 (1월~12월), row: 0~3 (대표패, 띠, 피1, 피2/쌍피)
+// 48장 + 보너스 2장 카드 목록 (스프라이트 도판 실제 배치 기준 정밀 매핑)
+// 도판 구조: 1행(1~3월), 2행(4~6월), 3행(7~9월), 4행(10월, 12월 비, 11월 오동)
 const HWA_TU_CARDS = [
-  // 1월 (송학 - 소나무)
-  { id: 'c01_kwang', month: 1, row: 0, type: CARD_TYPE.KWANG, name: '송학 광', score: 20, isKwang: true, tag: '光' },
-  { id: 'c01_hong',  month: 1, row: 1, type: CARD_TYPE.RIB,   name: '송학 홍단', rib: RIB_TYPE.HONG, tag: '홍단' },
-  { id: 'c01_pi1',   month: 1, row: 2, type: CARD_TYPE.PI,    name: '송학 피 1', piValue: 1 },
-  { id: 'c01_pi2',   month: 1, row: 3, type: CARD_TYPE.PI,    name: '송학 피 2', piValue: 1 },
+  // 1월 (송학 - 소나무: Row 0, Col 0~3)
+  { id: 'c01_kwang', month: 1, row: 0, col: 0, type: CARD_TYPE.KWANG, name: '송학 광', score: 20, isKwang: true, tag: '光' },
+  { id: 'c01_pi1',   month: 1, row: 0, col: 1, type: CARD_TYPE.PI,    name: '송학 피 1', piValue: 1 },
+  { id: 'c01_hong',  month: 1, row: 0, col: 2, type: CARD_TYPE.RIB,   name: '송학 홍단', rib: RIB_TYPE.HONG, tag: '홍단' },
+  { id: 'c01_pi2',   month: 1, row: 0, col: 3, type: CARD_TYPE.PI,    name: '송학 피 2', piValue: 1 },
 
-  // 2월 (매조 - 매화)
-  { id: 'c02_ten',   month: 2, row: 0, type: CARD_TYPE.TEN,   name: '매화 꾀꼬리', godori: true, tag: '고도리' },
-  { id: 'c02_hong',  month: 2, row: 1, type: CARD_TYPE.RIB,   name: '매화 홍단', rib: RIB_TYPE.HONG, tag: '홍단' },
-  { id: 'c02_pi1',   month: 2, row: 2, type: CARD_TYPE.PI,    name: '매화 피 1', piValue: 1 },
-  { id: 'c02_pi2',   month: 2, row: 3, type: CARD_TYPE.PI,    name: '매화 피 2', piValue: 1 },
+  // 2월 (매조 - 매화: Row 0, Col 4~7)
+  { id: 'c02_ten',   month: 2, row: 0, col: 4, type: CARD_TYPE.TEN,   name: '매화 꾀꼬리', godori: true, tag: '고도리' },
+  { id: 'c02_pi1',   month: 2, row: 0, col: 5, type: CARD_TYPE.PI,    name: '매화 피 1', piValue: 1 },
+  { id: 'c02_hong',  month: 2, row: 0, col: 6, type: CARD_TYPE.RIB,   name: '매화 홍단', rib: RIB_TYPE.HONG, tag: '홍단' },
+  { id: 'c02_pi2',   month: 2, row: 0, col: 7, type: CARD_TYPE.PI,    name: '매화 피 2', piValue: 1 },
 
-  // 3월 (벚꽃 - 사쿠라)
-  { id: 'c03_kwang', month: 3, row: 0, type: CARD_TYPE.KWANG, name: '벚꽃 만막 광', score: 20, isKwang: true, tag: '光' },
-  { id: 'c03_hong',  month: 3, row: 1, type: CARD_TYPE.RIB,   name: '벚꽃 홍단', rib: RIB_TYPE.HONG, tag: '홍단' },
-  { id: 'c03_pi1',   month: 3, row: 2, type: CARD_TYPE.PI,    name: '벚꽃 피 1', piValue: 1 },
-  { id: 'c03_pi2',   month: 3, row: 3, type: CARD_TYPE.PI,    name: '벚꽃 피 2', piValue: 1 },
+  // 3월 (벚꽃 - 사쿠라: Row 0, Col 8~11)
+  { id: 'c03_kwang', month: 3, row: 0, col: 8, type: CARD_TYPE.KWANG, name: '벚꽃 만막 광', score: 20, isKwang: true, tag: '光' },
+  { id: 'c03_pi1',   month: 3, row: 0, col: 9, type: CARD_TYPE.PI,    name: '벚꽃 피 1', piValue: 1 },
+  { id: 'c03_hong',  month: 3, row: 0, col: 10, type: CARD_TYPE.RIB,   name: '벚꽃 홍단', rib: RIB_TYPE.HONG, tag: '홍단' },
+  { id: 'c03_pi2',   month: 3, row: 0, col: 11, type: CARD_TYPE.PI,    name: '벚꽃 피 2', piValue: 1 },
 
-  // 4월 (흑싸리)
-  { id: 'c04_ten',   month: 4, row: 0, type: CARD_TYPE.TEN,   name: '흑싸리 두견새', godori: true, tag: '고도리' },
-  { id: 'c04_cho',   month: 4, row: 1, type: CARD_TYPE.RIB,   name: '흑싸리 초단', rib: RIB_TYPE.CHO, tag: '초단' },
-  { id: 'c04_pi1',   month: 4, row: 2, type: CARD_TYPE.PI,    name: '흑싸리 피 1', piValue: 1 },
-  { id: 'c04_pi2',   month: 4, row: 3, type: CARD_TYPE.PI,    name: '흑싸리 피 2', piValue: 1 },
+  // 4월 (흑싸리: Row 1, Col 0~3)
+  { id: 'c04_ten',   month: 4, row: 1, col: 0, type: CARD_TYPE.TEN,   name: '흑싸리 두견새', godori: true, tag: '고도리' },
+  { id: 'c04_pi1',   month: 4, row: 1, col: 1, type: CARD_TYPE.PI,    name: '흑싸리 피 1', piValue: 1 },
+  { id: 'c04_cho',   month: 4, row: 1, col: 2, type: CARD_TYPE.RIB,   name: '흑싸리 초단', rib: RIB_TYPE.CHO, tag: '초단' },
+  { id: 'c04_pi2',   month: 4, row: 1, col: 3, type: CARD_TYPE.PI,    name: '흑싸리 피 2', piValue: 1 },
 
-  // 5월 (난초 - 창포)
-  { id: 'c05_ten',   month: 5, row: 0, type: CARD_TYPE.TEN,   name: '난초 다리', tag: '열끗' },
-  { id: 'c05_cho',   month: 5, row: 1, type: CARD_TYPE.RIB,   name: '난초 초단', rib: RIB_TYPE.CHO, tag: '초단' },
-  { id: 'c05_pi1',   month: 5, row: 2, type: CARD_TYPE.PI,    name: '난초 피 1', piValue: 1 },
-  { id: 'c05_pi2',   month: 5, row: 3, type: CARD_TYPE.PI,    name: '난초 피 2', piValue: 1 },
+  // 5월 (난초 - 창포: Row 1, Col 4~7)
+  { id: 'c05_ten',   month: 5, row: 1, col: 4, type: CARD_TYPE.TEN,   name: '난초 다리', tag: '열끗' },
+  { id: 'c05_pi1',   month: 5, row: 1, col: 5, type: CARD_TYPE.PI,    name: '난초 피 1', piValue: 1 },
+  { id: 'c05_cho',   month: 5, row: 1, col: 6, type: CARD_TYPE.RIB,   name: '난초 초단', rib: RIB_TYPE.CHO, tag: '초단' },
+  { id: 'c05_pi2',   month: 5, row: 1, col: 7, type: CARD_TYPE.PI,    name: '난초 피 2', piValue: 1 },
 
-  // 6월 (모란)
-  { id: 'c06_ten',   month: 6, row: 0, type: CARD_TYPE.TEN,   name: '모란 나비', tag: '열끗' },
-  { id: 'c06_cheong',month: 6, row: 1, type: CARD_TYPE.RIB,   name: '모란 청단', rib: RIB_TYPE.CHEONG, tag: '청단' },
-  { id: 'c06_pi1',   month: 6, row: 2, type: CARD_TYPE.PI,    name: '모란 피 1', piValue: 1 },
-  { id: 'c06_pi2',   month: 6, row: 3, type: CARD_TYPE.PI,    name: '모란 피 2', piValue: 1 },
+  // 6월 (모란: Row 1, Col 8~11)
+  { id: 'c06_ten',   month: 6, row: 1, col: 8, type: CARD_TYPE.TEN,   name: '모란 나비', tag: '열끗' },
+  { id: 'c06_pi1',   month: 6, row: 1, col: 9, type: CARD_TYPE.PI,    name: '모란 피 1', piValue: 1 },
+  { id: 'c06_cheong',month: 6, row: 1, col: 10, type: CARD_TYPE.RIB,   name: '모란 청단', rib: RIB_TYPE.CHEONG, tag: '청단' },
+  { id: 'c06_pi2',   month: 6, row: 1, col: 11, type: CARD_TYPE.PI,    name: '모란 피 2', piValue: 1 },
 
-  // 7월 (홍싸리)
-  { id: 'c07_ten',   month: 7, row: 0, type: CARD_TYPE.TEN,   name: '홍싸리 멧돼지', tag: '열끗' },
-  { id: 'c07_cho',   month: 7, row: 1, type: CARD_TYPE.RIB,   name: '홍싸리 초단', rib: RIB_TYPE.CHO, tag: '초단' },
-  { id: 'c07_pi1',   month: 7, row: 2, type: CARD_TYPE.PI,    name: '홍싸리 피 1', piValue: 1 },
-  { id: 'c07_pi2',   month: 7, row: 3, type: CARD_TYPE.PI,    name: '홍싸리 피 2', piValue: 1 },
+  // 7월 (홍싸리: Row 2, Col 0~3)
+  { id: 'c07_ten',   month: 7, row: 2, col: 0, type: CARD_TYPE.TEN,   name: '홍싸리 멧돼지', tag: '열끗' },
+  { id: 'c07_pi1',   month: 7, row: 2, col: 1, type: CARD_TYPE.PI,    name: '홍싸리 피 1', piValue: 1 },
+  { id: 'c07_cho',   month: 7, row: 2, col: 2, type: CARD_TYPE.RIB,   name: '홍싸리 초단', rib: RIB_TYPE.CHO, tag: '초단' },
+  { id: 'c07_pi2',   month: 7, row: 2, col: 3, type: CARD_TYPE.PI,    name: '홍싸리 피 2', piValue: 1 },
 
-  // 8월 (공산 - 억새)
-  { id: 'c08_kwang', month: 8, row: 0, type: CARD_TYPE.KWANG, name: '공산 명월 광', score: 20, isKwang: true, tag: '光' },
-  { id: 'c08_ten',   month: 8, row: 1, type: CARD_TYPE.TEN,   name: '공산 기러기', godori: true, tag: '고도리' },
-  { id: 'c08_pi1',   month: 8, row: 2, type: CARD_TYPE.PI,    name: '공산 피 1', piValue: 1 },
-  { id: 'c08_pi2',   month: 8, row: 3, type: CARD_TYPE.PI,    name: '공산 피 2', piValue: 1 },
+  // 8월 (공산 - 억새: Row 2, Col 4~7)
+  { id: 'c08_kwang', month: 8, row: 2, col: 4, type: CARD_TYPE.KWANG, name: '공산 명월 광', score: 20, isKwang: true, tag: '光' },
+  { id: 'c08_pi1',   month: 8, row: 2, col: 5, type: CARD_TYPE.PI,    name: '공산 피 1', piValue: 1 },
+  { id: 'c08_ten',   month: 8, row: 2, col: 6, type: CARD_TYPE.TEN,   name: '공산 기러기', godori: true, tag: '고도리' },
+  { id: 'c08_pi2',   month: 8, row: 2, col: 7, type: CARD_TYPE.PI,    name: '공산 피 2', piValue: 1 },
 
-  // 9월 (국진 - 국화)
-  { id: 'c09_ten',   month: 9, row: 0, type: CARD_TYPE.TEN,   name: '국진 술잔 (쌍피전환 가능)', tag: '쌍피/열', canBeDoublePi: true },
-  { id: 'c09_cheong',month: 9, row: 1, type: CARD_TYPE.RIB,   name: '국화 청단', rib: RIB_TYPE.CHEONG, tag: '청단' },
-  { id: 'c09_pi1',   month: 9, row: 2, type: CARD_TYPE.PI,    name: '국화 피 1', piValue: 1 },
-  { id: 'c09_pi2',   month: 9, row: 3, type: CARD_TYPE.PI,    name: '국화 피 2', piValue: 1 },
+  // 9월 (국진 - 국화: Row 2, Col 8~11)
+  { id: 'c09_ten',   month: 9, row: 2, col: 8, type: CARD_TYPE.TEN,   name: '국진 술잔 (쌍피전환 가능)', tag: '쌍피/열', canBeDoublePi: true },
+  { id: 'c09_pi1',   month: 9, row: 2, col: 9, type: CARD_TYPE.PI,    name: '국화 피 1', piValue: 1 },
+  { id: 'c09_cheong',month: 9, row: 2, col: 10, type: CARD_TYPE.RIB,   name: '국화 청단', rib: RIB_TYPE.CHEONG, tag: '청단' },
+  { id: 'c09_pi2',   month: 9, row: 2, col: 11, type: CARD_TYPE.PI,    name: '국화 피 2', piValue: 1 },
 
-  // 10월 (단풍)
-  { id: 'c10_ten',   month: 10, row: 0, type: CARD_TYPE.TEN,  name: '단풍 사슴', tag: '열끗' },
-  { id: 'c10_cheong',month: 10, row: 1, type: CARD_TYPE.RIB,  name: '단풍 청단', rib: RIB_TYPE.CHEONG, tag: '청단' },
-  { id: 'c10_pi1',   month: 10, row: 2, type: CARD_TYPE.PI,   name: '단풍 피 1', piValue: 1 },
-  { id: 'c10_pi2',   month: 10, row: 3, type: CARD_TYPE.PI,   name: '단풍 피 2', piValue: 1 },
+  // 10월 (단풍: Row 3, Col 0~3)
+  { id: 'c10_ten',   month: 10, row: 3, col: 0, type: CARD_TYPE.TEN,  name: '단풍 사슴', tag: '열끗' },
+  { id: 'c10_pi1',   month: 10, row: 3, col: 1, type: CARD_TYPE.PI,   name: '단풍 피 1', piValue: 1 },
+  { id: 'c10_cheong',month: 10, row: 3, col: 2, type: CARD_TYPE.RIB,  name: '단풍 청단', rib: RIB_TYPE.CHEONG, tag: '청단' },
+  { id: 'c10_pi2',   month: 10, row: 3, col: 3, type: CARD_TYPE.PI,   name: '단풍 피 2', piValue: 1 },
 
-  // 11월 (오동)
-  { id: 'c11_kwang', month: 11, row: 0, type: CARD_TYPE.KWANG, name: '오동 봉황 광', score: 20, isKwang: true, tag: '光' },
-  { id: 'c11_pi_ssang', month: 11, row: 1, type: CARD_TYPE.PI, name: '오동 쌍피 (똥쌍피)', piValue: 2, tag: '쌍피' },
-  { id: 'c11_pi1',   month: 11, row: 2, type: CARD_TYPE.PI,   name: '오동 피 1', piValue: 1 },
-  { id: 'c11_pi2',   month: 11, row: 3, type: CARD_TYPE.PI,   name: '오동 피 2', piValue: 1 },
+  // 12월 (비: Row 3, Col 4~7) - 일본 화투 원본 도판의 11번째 열 위치
+  { id: 'c12_kwang', month: 12, row: 3, col: 4, type: CARD_TYPE.KWANG, name: '비 광 (선비/개구리)', score: 20, isKwang: true, isBiKwang: true, tag: '雨光' },
+  { id: 'c12_ten',   month: 12, row: 3, col: 5, type: CARD_TYPE.TEN,   name: '비 제비', tag: '열끗' },
+  { id: 'c12_rib',   month: 12, row: 3, col: 6, type: CARD_TYPE.RIB,   name: '비 띠', rib: RIB_TYPE.NONE, tag: '비띠' },
+  { id: 'c12_pi_ssang', month: 12, row: 3, col: 7, type: CARD_TYPE.PI, name: '비 쌍피', piValue: 2, tag: '쌍피' },
 
-  // 12월 (비)
-  { id: 'c12_kwang', month: 12, row: 0, type: CARD_TYPE.KWANG, name: '비 광 (선비/개구리)', score: 20, isKwang: true, isBiKwang: true, tag: '雨光' },
-  { id: 'c12_ten',   month: 12, row: 1, type: CARD_TYPE.TEN,   name: '비 제비', tag: '열끗' },
-  { id: 'c12_rib',   month: 12, row: 2, type: CARD_TYPE.RIB,   name: '비 띠', rib: RIB_TYPE.NONE, tag: '비띠' },
-  { id: 'c12_pi_ssang', month: 12, row: 3, type: CARD_TYPE.PI, name: '비 쌍피', piValue: 2, tag: '쌍피' },
+  // 11월 (오동: Row 3, Col 8~11) - 일본 화투 원본 도판의 12번째 열 위치
+  { id: 'c11_kwang', month: 11, row: 3, col: 8, type: CARD_TYPE.KWANG, name: '오동 봉황 광', score: 20, isKwang: true, tag: '光' },
+  { id: 'c11_pi1',   month: 11, row: 3, col: 9, type: CARD_TYPE.PI,   name: '오동 피 1', piValue: 1 },
+  { id: 'c11_pi_ssang', month: 11, row: 3, col: 10, type: CARD_TYPE.PI, name: '오동 쌍피 (똥쌍피)', piValue: 2, tag: '쌍피' },
+  { id: 'c11_pi2',   month: 11, row: 3, col: 11, type: CARD_TYPE.PI,   name: '오동 피 2', piValue: 1 },
 
   // 보너스 패 2장
   { id: 'bonus_2pi', month: 0, type: CARD_TYPE.BONUS, name: '보너스 쌍피 (복돼지)', piValue: 2, tag: '보너스 2皮' },
@@ -103,25 +103,25 @@ const HWA_TU_CARDS = [
 // 정통 화투 마스터 스프라이트 좌표 테이블
 // 카드 1장: width 103.2, height 168.2
 const COL_X = [
-  0,        // 1월
-  108.55,   // 2월
-  217.75,   // 3월
-  326.3,    // 4월
-  447.2,    // 5월
-  555.75,   // 6월
-  664.95,   // 7월
-  773.5,    // 8월
-  895.7,    // 9월
-  1004.2,   // 10월
-  1113.4,   // 11월
-  1222.0    // 12월
+  0,        // Col 0
+  108.55,   // Col 1
+  217.75,   // Col 2
+  326.3,    // Col 3
+  447.2,    // Col 4
+  555.75,   // Col 5
+  664.95,   // Col 6
+  773.5,    // Col 7
+  895.7,    // Col 8
+  1004.2,   // Col 9
+  1113.4,   // Col 10
+  1222.0    // Col 11
 ];
 
 const ROW_Y = [
-  0,        // 1행 (광 / 대표 열)
-  186.3,    // 2행 (띠 / 고도리 새 / 똥쌍피 / 비제비)
-  373.75,   // 3행 (피 1 / 비띠)
-  563.5     // 4행 (피 2 / 비쌍피)
+  0,        // Row 0 (1~3월)
+  186.3,    // Row 1 (4~6월)
+  373.75,   // Row 2 (7~9월)
+  563.5     // Row 3 (10월, 12월 비, 11월 오동)
 ];
 
 /**
@@ -156,7 +156,7 @@ function renderCardSVG(card, isBack = false) {
         <rect x="2" y="2" width="${cardW - 4}" height="${cardH - 4}" rx="${rx - 1}" fill="url(#backRed)" stroke="#f87171" stroke-width="1.2"/>
         <rect x="5" y="5" width="${cardW - 10}" height="${cardH - 10}" rx="4" fill="url(#backDiamond)"/>
         
-        <!-- 중앙 황금색 花 엠블럼 -->
+        <!-- 중앙 황금색 화 엠블럼 -->
         <circle cx="${cardW / 2}" cy="${cardH / 2}" r="18" fill="#581010" stroke="#fef08a" stroke-width="1.5"/>
         <text x="${cardW / 2}" y="${cardH / 2 + 6}" font-family="'Batang', serif" font-size="18" font-weight="900" fill="#fef08a" text-anchor="middle">花</text>
       </svg>
@@ -187,8 +187,8 @@ function renderCardSVG(card, isBack = false) {
     `;
   }
 
-  // 1월 ~ 12월 48장 정통 한국 화투 벡터 마스터 에셋 연동
-  const col = card.month - 1;
+  // 1월 ~ 12월 48장 정통 한국 화투 벡터 마스터 에셋 연동 (정확한 row, col 기반 슬라이스)
+  const col = card.col !== undefined ? card.col : (card.month - 1);
   const row = card.row !== undefined ? card.row : 0;
   // 빨간 테두리 외곽 중심 보정 오프셋 (+6.3, +7.2)
   const offsetX = COLX_VAL(col) + 6.3;

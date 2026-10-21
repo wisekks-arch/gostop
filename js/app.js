@@ -325,7 +325,7 @@ class GoStopApp {
     }
   }
 
-  // 바닥패 렌더링 (월별 그룹핑 배치)
+  // 바닥패 렌더링 (월별 그룹핑 배치 및 터치 매칭 인터랙션)
   renderField() {
     this.dom.fieldBoard.innerHTML = '';
 
@@ -335,6 +335,8 @@ class GoStopApp {
       if (!monthGroups[card.month]) monthGroups[card.month] = [];
       monthGroups[card.month].push(card);
     }
+
+    const isPlayerTurn = this.engine.turn === 'player' && !this.isProcessingTurn;
 
     for (const [month, cards] of Object.entries(monthGroups)) {
       const slot = document.createElement('div');
@@ -347,15 +349,58 @@ class GoStopApp {
         wrap.dataset.cardId = card.id;
         wrap.innerHTML = renderCardSVG(card, false);
 
-        // 내 손패가 선택되었을 때, 같은 월이면 발광 하이라이트(Highlight Glow) 적용!
-        if (this.selectedHandCard && this.selectedHandCard.month === Number(month)) {
+        // 내 손패가 선택되었을 때, 같은 월이면 발광 하이라이트(Highlight Glow) 및 커서 적용!
+        const isMatch = this.selectedHandCard && this.selectedHandCard.month === Number(month);
+        if (isMatch) {
           wrap.classList.add('highlight-match');
+          wrap.style.cursor = 'pointer';
         }
+
+        // 바닥패 터치/클릭 시 한국 정통 고스톱 룰에 따른 매칭 및 따오기 실행!
+        wrap.addEventListener('click', () => {
+          if (!isPlayerTurn) return;
+          this.handleFieldCardClick(card);
+        });
 
         slot.appendChild(wrap);
       });
 
       this.dom.fieldBoard.appendChild(slot);
+    }
+  }
+
+  // 바닥패 터치/클릭 인터랙션 (한국 전통 고스톱 패 따오기 룰)
+  async handleFieldCardClick(fieldCard) {
+    if (this.isProcessingTurn || this.engine.turn !== 'player') return;
+
+    // 1) 손패가 이미 선택되어 있는 경우
+    if (this.selectedHandCard) {
+      // 선택된 손패와 바닥패의 월이 일치하면 -> 바로 해당 바닥패를 매칭하여 즉시 내기/따오기 실행!
+      if (this.selectedHandCard.month === fieldCard.month) {
+        const cardToPlay = this.selectedHandCard;
+        this.selectedHandCard = null;
+        await this.executePlayerTurn(cardToPlay, fieldCard);
+        return;
+      }
+
+      // 월이 일치하지 않는 다른 바닥패를 터치한 경우:
+      // 내 손패 중 해당 바닥패와 월이 맞는 카드가 있는지 찾아 자동 전환
+      const matchingHandCard = this.engine.player.hand.find(c => c.month === fieldCard.month);
+      if (matchingHandCard) {
+        this.selectedHandCard = matchingHandCard;
+        this.sound.playCardSnap();
+        this.render();
+      }
+      return;
+    }
+
+    // 2) 손패가 아직 선택되지 않은 경우:
+    // 터치한 바닥패와 같은 월의 손패가 있으면 해당 손패를 즉시 선택(튀어오름 & 하이라이트)
+    const matchingHandCard = this.engine.player.hand.find(c => c.month === fieldCard.month);
+    if (matchingHandCard) {
+      this.selectedHandCard = matchingHandCard;
+      this.sound.playCardSnap();
+      this.render();
     }
   }
 
@@ -406,8 +451,8 @@ class GoStopApp {
     this.render();
   }
 
-  // 플레이어 턴 실행
-  async executePlayerTurn(card) {
+  // 플레이어 턴 실행 (사용자가 직접 선택한 바닥패 preChosenFieldCard 지원)
+  async executePlayerTurn(card, preChosenFieldCard = null) {
     this.isProcessingTurn = true;
     this.render();
 
@@ -415,11 +460,11 @@ class GoStopApp {
     const bombMonths = this.engine.getBombableMonths(this.engine.player);
     const isBomb = bombMonths.includes(card.month);
 
-    let chosenFieldCard = null;
+    let chosenFieldCard = preChosenFieldCard;
     const matches = this.engine.getFieldMatches(card.month);
 
-    // 바닥에 2장 있는 경우: 플레이어 선택 팝업 모달 호출
-    if (!isBomb && matches.length === 2) {
+    // 사용자가 바닥패를 직접 찍지 않았고 바닥에 2장 있는 경우: 플레이어 선택 팝업 모달 호출
+    if (!isBomb && !chosenFieldCard && matches.length === 2) {
       chosenFieldCard = await this.promptChoiceModal(matches);
     }
 
