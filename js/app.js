@@ -21,13 +21,14 @@ class GoStopApp {
     this.currentStake = parseInt(localStorage.getItem('gostop_stake') || '1000', 10);
     if (![1000, 2000, 5000, 10000, 50000, 100000].includes(this.currentStake)) this.currentStake = 1000;
 
+    this.isGameActive = false; // 게임 진행 중 여부 (게임 중에는 판돈 변경 불가)
+
     // DOM 캐시
     this.dom = {
       app: document.getElementById('game-app'),
       turnIndicator: document.getElementById('turn-indicator'),
-      btnStake: document.getElementById('btn-stake'),
-      stakeMenu: document.getElementById('stake-menu'),
-      stakeItems: document.querySelectorAll('.stake-item'),
+      stakeSelectWrap: document.getElementById('stake-select-wrap'),
+      selectPointStake: document.getElementById('select-point-stake'),
       btnSpeed: document.getElementById('btn-speed'),
       btnFullscreen: document.getElementById('btn-fullscreen'),
       btnSound: document.getElementById('btn-sound'),
@@ -246,38 +247,34 @@ class GoStopApp {
     }
   }
 
-  // 점당 판돈 선택기 초기화 및 이벤트 등록
+  // 점당 판돈 풀다운 <select> 선택기 초기화 및 이벤트 등록
   initStakeSelector() {
-    if (!this.dom.btnStake || !this.dom.stakeMenu) return;
+    if (!this.dom.selectPointStake) return;
 
     this.applyStake(this.currentStake, false);
 
-    // 버튼 클릭 시 드롭다운 토글
-    this.dom.btnStake.addEventListener('click', (e) => {
-      e.stopPropagation();
-      this.dom.stakeMenu.classList.toggle('hidden');
-    });
-
-    // 옵션 클릭 시 판돈 변경
-    if (this.dom.stakeItems) {
-      this.dom.stakeItems.forEach((item) => {
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const stake = parseInt(item.dataset.stake, 10);
-          this.applyStake(stake, true);
-          this.dom.stakeMenu.classList.add('hidden');
-        });
-      });
-    }
-
-    // 외부 영역 클릭 시 드롭다운 닫기
-    document.addEventListener('click', (e) => {
-      if (this.dom.stakeMenu && !this.dom.stakeMenu.classList.contains('hidden')) {
-        if (!e.target.closest('.stake-dropdown-wrap')) {
-          this.dom.stakeMenu.classList.add('hidden');
-        }
+    // 풀다운 변경 이벤트
+    this.dom.selectPointStake.addEventListener('change', () => {
+      // 게임 진행 중에는 변경 불가!
+      if (this.isGameActive) {
+        this.dom.selectPointStake.value = this.currentStake.toString();
+        this.showBanner('⚠️ 게임 진행 중에는 판돈을 변경할 수 없습니다! (새 게임 시작 전 변경 가능)', 1600);
+        return;
       }
+
+      const stake = parseInt(this.dom.selectPointStake.value, 10);
+      this.applyStake(stake, true);
     });
+  }
+
+  // 게임 진행 중 풀다운 비활성화(잠금) / 새 게임 전 활성화(해제)
+  updateStakeSelectorDisabled(disabled) {
+    if (this.dom.selectPointStake) {
+      this.dom.selectPointStake.disabled = disabled;
+    }
+    if (this.dom.stakeSelectWrap) {
+      this.dom.stakeSelectWrap.classList.toggle('disabled', disabled);
+    }
   }
 
   // 판돈 적용 및 UI 갱신
@@ -285,22 +282,11 @@ class GoStopApp {
     this.currentStake = this.engine.setStakePerPoint(stake);
     localStorage.setItem('gostop_stake', this.currentStake.toString());
 
+    if (this.dom.selectPointStake) {
+      this.dom.selectPointStake.value = this.currentStake.toString();
+    }
+
     const label = this.getStakeLabel(this.currentStake);
-    if (this.dom.btnStake) {
-      this.dom.btnStake.textContent = `💰 점당: ${label} ▾`;
-    }
-
-    if (this.dom.stakeItems) {
-      this.dom.stakeItems.forEach((item) => {
-        const val = parseInt(item.dataset.stake, 10);
-        if (val === this.currentStake) {
-          item.classList.add('active');
-        } else {
-          item.classList.remove('active');
-        }
-      });
-    }
-
     if (notify) {
       this.sound.playCardSnap();
       this.showBanner(`💰 1점당 ${label} 설정 완료`, 1000);
@@ -336,6 +322,9 @@ class GoStopApp {
   startNewGame() {
     this.selectedHandCard = null;
     this.isProcessingTurn = false;
+    this.isGameActive = true;
+    this.updateStakeSelectorDisabled(true); // 게임 진행 중 판돈 변경 잠금
+
     const initRes = this.engine.initGame();
     this.engine.setStakePerPoint(this.currentStake);
 
@@ -838,14 +827,15 @@ class GoStopApp {
   async processDeckPhase(player, handResult) {
     const isPlayer = player === this.engine.player;
 
-    // 덱 패 뒤집기 전 덱 카드 점검
-    const deckMatches = this.engine.field.filter(c => this.engine.deck.length > 0 && c.month === this.engine.deck[this.engine.deck.length - 1].month);
+    // 덱 패 뒤집기 전 덱 카드 점검 (보너스 패를 건너뛴 실제 다음 카드 기준)
+    const nextDeckCard = this.engine.peekNextDrawCard();
+    const deckMatches = nextDeckCard ? this.engine.field.filter(c => c.month === nextDeckCard.month) : [];
     let chosenDeckField = null;
 
     if (isPlayer && deckMatches.length === 2) {
       chosenDeckField = await this.promptChoiceModal(deckMatches);
-    } else if (!isPlayer && deckMatches.length === 2) {
-      chosenDeckField = this.ai.decideDeckFieldChoice(this.engine.deck[this.engine.deck.length - 1], deckMatches);
+    } else if (!isPlayer && deckMatches.length === 2 && nextDeckCard) {
+      chosenDeckField = this.ai.decideDeckFieldChoice(nextDeckCard, deckMatches);
     }
 
     this.sound.playCardSnap();
@@ -1046,6 +1036,9 @@ class GoStopApp {
 
   // 라운드 종료 및 정산 모달
   handleRoundEnd(winnerSide, isStop) {
+    this.isGameActive = false;
+    this.updateStakeSelectorDisabled(false); // 판 종료: 새 판 시작 전 판돈 변경 잠금 해제
+
     const result = this.engine.finalizeWinner(winnerSide, isStop);
     const isPlayerWin = winnerSide === 'player';
 
@@ -1083,6 +1076,9 @@ class GoStopApp {
 
   // 덱이나 패가 다 떨어져 무승부 처리
   handleDrawOrFinalScore() {
+    this.isGameActive = false;
+    this.updateStakeSelectorDisabled(false); // 판 종료: 새 판 시작 전 판돈 변경 잠금 해제
+
     const pScore = this.engine.calculateScore(this.engine.player).total;
     const oppScore = this.engine.calculateScore(this.engine.opponent).total;
 

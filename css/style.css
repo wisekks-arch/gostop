@@ -112,70 +112,71 @@ body {
   border-color: var(--gold-accent);
 }
 
-/* 점당 판돈 선택 드롭다운 */
-.stake-dropdown-wrap {
+/* 점당 판돈 풀다운 <select> 메뉴 */
+.stake-select-wrap {
   position: relative;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  background: rgba(12, 28, 20, 0.75);
+  border: 1px solid rgba(250, 204, 21, 0.55);
+  border-radius: 20px;
+  padding: 2px 8px 2px 10px;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4);
+  transition: all 0.2s ease;
 }
 
-.stake-menu {
-  position: absolute;
-  top: calc(100% + 6px);
-  left: 0;
-  background: rgba(12, 28, 20, 0.96);
-  border: 1px solid rgba(250, 204, 21, 0.5);
-  border-radius: 12px;
-  padding: 6px;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
-  min-width: 120px;
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.7), 0 0 15px rgba(250, 204, 21, 0.25);
-  backdrop-filter: blur(12px);
-  z-index: 1000;
-  animation: fadeInDown 0.15s ease-out;
+.stake-select-wrap:hover:not(.disabled) {
+  border-color: #facc15;
+  background: rgba(18, 42, 30, 0.9);
 }
 
-.stake-menu.hidden {
-  display: none !important;
+.stake-select-icon {
+  font-size: 13px;
+  margin-right: 4px;
+  line-height: 1;
 }
 
-.stake-item {
+.stake-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
   background: transparent;
   border: none;
-  color: #e2e8f0;
-  font-size: 11px;
-  font-weight: 500;
-  padding: 6px 10px;
-  border-radius: 8px;
+  outline: none;
+  color: #facc15;
+  font-size: 12px;
+  font-weight: 600;
   cursor: pointer;
-  text-align: left;
-  transition: all 0.15s ease;
-  white-space: nowrap;
+  padding: 3px 18px 3px 2px;
+  letter-spacing: 0.2px;
+  /* 세련된 황금색 역삼각형 화살표 */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%23facc15' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 2px center;
+  background-size: 8px 5px;
 }
 
-.stake-item:hover,
-.stake-item:active {
-  background: rgba(250, 204, 21, 0.18);
-  color: #facc15;
+.stake-select option {
+  background: #0f241a;
+  color: #fef08a;
+  font-weight: 500;
+  padding: 8px 12px;
+  font-size: 13px;
 }
 
-.stake-item.active {
-  background: rgba(250, 204, 21, 0.28);
-  color: #facc15;
-  font-weight: bold;
-  border-left: 3px solid #facc15;
+/* 게임 진행 중 비활성화 상태 (잠금) */
+.stake-select-wrap.disabled {
+  opacity: 0.55;
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(0, 0, 0, 0.4);
+  cursor: not-allowed;
 }
 
-@keyframes fadeInDown {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+.stake-select-wrap.disabled .stake-select {
+  cursor: not-allowed;
+  color: #94a3b8;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath fill='%2394a3b8' d='M0 0l5 6 5-6z'/%3E%3C/svg%3E");
 }
 
 /* ============================================================

@@ -178,6 +178,16 @@ class GoStopEngine {
     });
   }
 
+  // 덱에서 보너스 카드를 제외하고 다음에 실제로 뒤집힐 일반 카드 미리보기
+  peekNextDrawCard() {
+    for (let i = this.deck.length - 1; i >= 0; i--) {
+      if (this.deck[i].type !== CARD_TYPE.BONUS) {
+        return this.deck[i];
+      }
+    }
+    return null;
+  }
+
   // 바닥에서 특정 월의 카드들 찾기
   getFieldMatches(month) {
     if (month === 0) return []; // 보너스패는 바닥 매칭 없음
@@ -384,15 +394,25 @@ class GoStopEngine {
       }
     }
 
-    // 획득할 총 패 수집
+    // 획득할 총 패 수집 (바닥에 짝이 맞은 패만 정확히 획득!)
     const totalCaptured = [];
     if (!isPpeok) {
-      totalCaptured.push(...playedCards, ...matchedFieldCards);
-      if (deckMatchedFieldCards.length > 0 || isJjok) {
+      // 1. 손패 매칭: 바닥에 짝이 맞아 먹은 경우에만 손패와 바닥패 획득
+      if (matchedFieldCards.length > 0 && !isJjok) {
+        totalCaptured.push(...playedCards, ...matchedFieldCards);
+      }
+
+      // 2. 덱 패 매칭: 바닥에 짝이 맞아 먹은 경우에만 덱패와 바닥패 획득
+      if (deckMatchedFieldCards.length > 0) {
         totalCaptured.push(deckCard, ...deckMatchedFieldCards);
       }
 
-      // 3. 따닥 판정: 손패로 먹고, 덱으로 바닥에 남아있던 같은 월 먹어서 4장 모두 싹쓸이
+      // 3. 쪽(Jjok) 발생: 바닥에 짝이 없던 손패가 덱에서 나온 패와 짝이 맞아 먹음 (딱 2장만 중복 없이 획득)
+      if (isJjok) {
+        totalCaptured.push(...playedCards, deckCard);
+      }
+
+      // 4. 따닥 판정: 손패로 먹고, 덱으로 바닥에 남아있던 같은 월 먹어서 4장 모두 싹쓸이
       if (handCard && matchedFieldCards.length === 1 && deckCard.month === handCard.month && deckMatchedFieldCards.length === 1) {
         isTtadak = true;
       }
@@ -402,7 +422,7 @@ class GoStopEngine {
         this.addCapturedCard(player, c);
       }
 
-      // 4. 쓸(판쓸이) 판정: 바닥에 패가 하나도 안 남은 경우
+      // 5. 쓸(판쓸이) 판정: 바닥에 패가 하나도 안 남은 경우
       if (this.field.length === 0) {
         isSseul = true;
       }
