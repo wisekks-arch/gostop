@@ -1,0 +1,593 @@
+/* ============================================================
+   맞고 (GOSTOP) 모바일 웹 최적화 프리미엄 스타일시트
+   반응형 가로 모드 (16:9 ~ 20:9 비율 기준)
+   ============================================================ */
+
+:root {
+  --mat-bg-color: #0b3c2c;
+  --mat-inner-border: rgba(255, 215, 0, 0.25);
+  --gold-accent: #ffd166;
+  --gold-glow: rgba(255, 209, 102, 0.7);
+  --red-accent: #e63946;
+  --text-light: #f8f9fa;
+  --card-w: 68px;
+  --card-h: 105px;
+  --card-radius: 6px;
+  --font-family: -apple-system, BlinkMacSystemFont, "Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans KR", sans-serif;
+}
+
+/* 브라우저 기본 제스처 원천 차단 */
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html, body {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background-color: #05140e;
+  font-family: var(--font-family);
+  color: var(--text-light);
+}
+
+/* 메인 컨테이너 (16:9 ~ 20:9 비율 가로 뷰포트 고정) */
+#game-app {
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: radial-gradient(circle at 50% 50%, #11573f 0%, #0b3c2c 60%, #052117 100%);
+  overflow: hidden;
+}
+
+/* 상단 유틸리티 바 (전체화면, 사운드, 룰 안내, 잔액) */
+.top-bar {
+  position: absolute;
+  top: 6px;
+  left: 12px;
+  right: 12px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.top-bar > * {
+  pointer-events: auto;
+}
+
+.game-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 15px;
+  font-weight: 900;
+  color: var(--gold-accent);
+  text-shadow: 0 2px 4px rgba(0,0,0,0.6);
+  letter-spacing: 1px;
+}
+
+.util-buttons {
+  display: flex;
+  gap: 8px;
+}
+
+.btn-icon {
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  color: #fff;
+  border-radius: 20px;
+  padding: 5px 12px;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s ease;
+}
+
+.btn-icon:active {
+  transform: scale(0.94);
+  background: rgba(255, 215, 0, 0.2);
+  border-color: var(--gold-accent);
+}
+
+/* ============================================================
+   메인 게임 테이블 레이아웃
+   ============================================================ */
+.game-table {
+  flex: 1;
+  display: grid;
+  grid-template-rows: 24% 44% 32%;
+  width: 100%;
+  height: 100%;
+  padding: 34px 12px 10px 12px;
+}
+
+/* 1. 상대방 영역 */
+.opponent-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 10px;
+  position: relative;
+}
+
+.profile-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(0, 0, 0, 0.45);
+  padding: 6px 14px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+  backdrop-filter: blur(4px);
+}
+
+.profile-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #e63946, #b01b1b);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 20px;
+  border: 2px solid var(--gold-accent);
+  box-shadow: 0 2px 6px rgba(0,0,0,0.4);
+}
+
+.profile-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.profile-name {
+  font-size: 13px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.profile-money {
+  font-size: 12px;
+  color: var(--gold-accent);
+  font-weight: bold;
+}
+
+.score-badge {
+  background: linear-gradient(135deg, #d90429, #9d0208);
+  border: 1px solid #ffccd5;
+  border-radius: 8px;
+  padding: 4px 10px;
+  text-align: center;
+  min-width: 54px;
+}
+
+.score-badge .score-val {
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  line-height: 1.1;
+}
+
+.score-badge .score-lbl {
+  font-size: 9px;
+  opacity: 0.85;
+}
+
+/* 획득패 영역 (광 / 열 / 띠 / 피) */
+.captured-panel {
+  display: flex;
+  gap: 8px;
+  background: rgba(0, 0, 0, 0.35);
+  padding: 4px 8px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.captured-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 54px;
+}
+
+.group-title {
+  font-size: 10px;
+  color: #ffd166;
+  font-weight: bold;
+  margin-bottom: 2px;
+}
+
+.group-cards {
+  position: relative;
+  width: 50px;
+  height: 52px;
+}
+
+.mini-card {
+  position: absolute;
+  width: 36px;
+  height: 52px;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.4);
+  transition: all 0.2s ease;
+}
+
+/* 2. 중앙 필드 영역 (중앙 덱 + 바닥패 매트) */
+.field-row {
+  display: grid;
+  grid-template-columns: 100px 1fr;
+  gap: 16px;
+  align-items: center;
+  padding: 0 16px;
+  position: relative;
+}
+
+.deck-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.deck-stack {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+}
+
+.deck-card-layer {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border-radius: var(--card-radius);
+  box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+}
+
+.deck-count {
+  font-size: 12px;
+  font-weight: 800;
+  color: var(--gold-accent);
+  background: rgba(0,0,0,0.6);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+/* 바닥패 보드 */
+.field-board {
+  display: flex;
+  flex-wrap: wrap;
+  align-content: center;
+  gap: 10px 14px;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 16px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  padding: 8px 14px;
+  overflow: visible;
+}
+
+/* 바닥 월별 슬롯 */
+.field-slot {
+  display: flex;
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  align-items: center;
+  justify-content: center;
+}
+
+/* 바닥패 겹침 렌더링 */
+.field-slot .hwatu-card-wrap {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  transition: all 0.25s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.field-slot .hwatu-card-wrap:nth-child(2) {
+  top: 14px;
+  left: 10px;
+}
+
+.field-slot .hwatu-card-wrap:nth-child(3) {
+  top: 28px;
+  left: 20px;
+}
+
+/* 3. 하단 플레이어 영역 (내 프로필/점수 + 내 손패 10장) */
+.player-row {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: 6px;
+  padding: 0 10px;
+  position: relative;
+}
+
+.player-status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+/* 내 손패 영역 */
+.player-hand-container {
+  display: flex;
+  justify-content: center;
+  align-items: flex-end;
+  gap: 8px;
+  width: 100%;
+  height: 115px;
+  padding-bottom: 2px;
+}
+
+/* 손패 개별 래퍼 및 터치 Hitbox (15~20% 확장) */
+.hand-card-slot {
+  position: relative;
+  width: var(--card-w);
+  height: var(--card-h);
+  cursor: pointer;
+  padding: 6px; /* 터치 Hitbox 확장 */
+  margin: -6px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* 터치 / 호버 시 튀어오름(Bounce) 인터랙션 */
+.hand-card-slot:hover,
+.hand-card-slot.selected {
+  transform: translateY(-20px) scale(1.08);
+  z-index: 50;
+}
+
+.hand-card-slot.disabled {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* 카드 카드 공통 스타일 */
+.hwatu-card-wrap {
+  width: var(--card-w);
+  height: var(--card-h);
+  border-radius: var(--card-radius);
+  box-shadow: 0 6px 14px rgba(0,0,0,0.4);
+  position: relative;
+  transition: all 0.25s ease;
+}
+
+/* 바닥패 매칭 시 찬란한 발광 테두리 (Glow Highlight) */
+.hwatu-card-wrap.highlight-match {
+  box-shadow: 0 0 18px 6px #ffd166, 0 0 28px 10px rgba(255, 209, 102, 0.8) !important;
+  transform: scale(1.12);
+  z-index: 60;
+  animation: pulse-glow 1s infinite alternate;
+}
+
+@keyframes pulse-glow {
+  0% {
+    box-shadow: 0 0 14px 4px #ffd166, 0 0 24px 8px rgba(255, 209, 102, 0.7);
+  }
+  100% {
+    box-shadow: 0 0 22px 8px #fff3b0, 0 0 36px 14px rgba(255, 230, 109, 0.95);
+  }
+}
+
+/* ============================================================
+   특수 팝업 & 모달 (고/스톱, 바닥 2장 선택, 결과 정산)
+   ============================================================ */
+.modal-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.75);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  backdrop-filter: blur(6px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s ease;
+}
+
+.modal-overlay.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.modal-box {
+  background: linear-gradient(135deg, #1b4332, #081c15);
+  border: 2px solid var(--gold-accent);
+  border-radius: 20px;
+  padding: 24px 32px;
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.8), 0 0 30px rgba(255, 209, 102, 0.3);
+  text-align: center;
+  max-width: 90%;
+  animation: modal-pop 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modal-pop {
+  0% { transform: scale(0.7); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.modal-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: var(--gold-accent);
+  margin-bottom: 12px;
+  text-shadow: 0 2px 6px rgba(0,0,0,0.8);
+}
+
+.modal-desc {
+  font-size: 14px;
+  color: #e2e8f0;
+  margin-bottom: 20px;
+}
+
+/* 고 / 스톱 버튼 그룹 */
+.go-stop-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+}
+
+.btn-gostop {
+  padding: 14px 36px;
+  border-radius: 14px;
+  font-size: 22px;
+  font-weight: 900;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+
+.btn-go {
+  background: linear-gradient(135deg, #d90429, #9d0208);
+  color: #fff;
+  border: 2px solid #ffccd5;
+}
+
+.btn-go:hover, .btn-go:active {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px rgba(217, 4, 41, 0.8);
+}
+
+.btn-stop {
+  background: linear-gradient(135deg, #023e8a, #03045e);
+  color: #fff;
+  border: 2px solid #caf0f8;
+}
+
+.btn-stop:hover, .btn-stop:active {
+  transform: scale(1.08);
+  box-shadow: 0 0 20px rgba(2, 62, 138, 0.8);
+}
+
+/* 바닥 2장 선택 모달 카드 컨테이너 */
+.choice-cards-container {
+  display: flex;
+  gap: 24px;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.choice-card-item {
+  cursor: pointer;
+  transform: scale(1.15);
+  transition: transform 0.2s ease;
+}
+
+.choice-card-item:hover, .choice-card-item:active {
+  transform: scale(1.28);
+}
+
+/* 정산 결과 모달 리스트 */
+.result-score-list {
+  background: rgba(0, 0, 0, 0.4);
+  border-radius: 12px;
+  padding: 12px 18px;
+  text-align: left;
+  font-size: 13px;
+  margin-bottom: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.result-score-item {
+  display: flex;
+  justify-content: space-between;
+}
+
+.result-total {
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  padding-top: 6px;
+  font-weight: 900;
+  font-size: 16px;
+  color: var(--gold-accent);
+}
+
+/* 특수 이펙트 배너 (쪽! 따닥! 뻑! 쓸! 폭탄!) */
+#effect-banner {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0);
+  font-size: 44px;
+  font-weight: 900;
+  color: #ffd166;
+  text-shadow: 0 0 20px #e63946, 0 4px 10px #000;
+  z-index: 1200;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.banner-pop {
+  animation: banner-animation 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+}
+
+@keyframes banner-animation {
+  0% { transform: translate(-50%, -50%) scale(0.2); opacity: 0; }
+  30% { transform: translate(-50%, -50%) scale(1.2); opacity: 1; }
+  70% { transform: translate(-50%, -50%) scale(1.0); opacity: 1; }
+  100% { transform: translate(-50%, -50%) scale(1.4); opacity: 0; }
+}
+
+/* 가로 모드 유도 회전 오버레이 (세로 화면 감지 시) */
+#rotate-guide-overlay {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  background: #081c15;
+  z-index: 9999;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  padding: 20px;
+}
+
+.rotate-icon {
+  font-size: 60px;
+  animation: rotate-phone 2s infinite ease-in-out;
+  margin-bottom: 20px;
+}
+
+@keyframes rotate-phone {
+  0% { transform: rotate(0deg); }
+  50% { transform: rotate(90deg); }
+  100% { transform: rotate(0deg); }
+}
+
+/* 세로 모드일 때만 회전 안내 노출 */
+@media screen and (orientation: portrait) {
+  #rotate-guide-overlay {
+    display: flex;
+  }
+}
