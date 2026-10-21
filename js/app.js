@@ -104,9 +104,35 @@ class GoStopApp {
 
   // 초기 시작
   init() {
+    this.initViewportSync();
     this.bindEvents();
     this.preventGestures();
     this.startNewGame();
+  }
+
+  // 모바일 크롬/삼성인터넷 주소창 및 하단 툴바 동적 크기 변화 실시간 동기화
+  initViewportSync() {
+    const updateSize = () => {
+      const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+      const vh = window.visualViewport ? window.visualViewport.height : window.innerHeight;
+      const vw = window.visualViewport ? window.visualViewport.width : window.innerWidth;
+
+      if (isPortrait) {
+        // 세로 화면일 때는 90도 회전되므로, 실제 보이는 뷰포트 높이(vh)가 게임판의 가로폭이 되고 너비(vw)가 높이가 됨
+        document.documentElement.style.setProperty('--app-w', `${vh}px`);
+        document.documentElement.style.setProperty('--app-h', `${vw}px`);
+      } else {
+        document.documentElement.style.removeProperty('--app-w');
+        document.documentElement.style.removeProperty('--app-h');
+      }
+    };
+
+    updateSize();
+    window.addEventListener('resize', updateSize);
+    window.addEventListener('orientationchange', () => setTimeout(updateSize, 120));
+    if (window.visualViewport) {
+      window.visualViewport.addEventListener('resize', updateSize);
+    }
   }
 
   // 모바일 웹 제스처 방지
