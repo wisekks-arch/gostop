@@ -13,6 +13,10 @@ const MapRenderer = (() => {
   const particles = [];
   const floatingTexts = [];
 
+  // [신규] 실제 클래식 핀볼 머신 실사 플레이필드 이미지 자산 로드
+  const realTableImage = new Image();
+  realTableImage.src = "assets/table_bg.jpg?v=20261029_1700";
+
   // 전구 애니메이션 타이머
   let chaserStep = 0;
   let flashIntensity = 0; // 범퍼 타격 시 순간 플래시 밝기 (0 ~ 1)
@@ -141,27 +145,35 @@ const MapRenderer = (() => {
     ctx.restore();
   }
 
-  // 1. 캐비닛 배경 (원근감 딥 카지노 우드 & 메탈 프레임)
+  // 1. 캐비닛 배경 (실제 핀볼 머신 고화질 실사 이미지 렌더링)
   function renderCabinetBackground(theme) {
-    // 딥 그라디언트 테이블 매트
-    const grad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
-    grad.addColorStop(0, theme.bgGradient[0]);
-    grad.addColorStop(0.5, theme.bgGradient[1]);
-    grad.addColorStop(1, theme.bgGradient[2]);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+    if (realTableImage && realTableImage.complete && realTableImage.naturalWidth > 0) {
+      // 실사 핀볼 플레이필드 텍스처 렌더링 (첨부 사진 고화질 그래픽)
+      ctx.drawImage(realTableImage, 0, 0, V_WIDTH, V_HEIGHT);
 
-    // 플래시 효과 발동 시 은은한 전체 발광
-    if (flashIntensity > 0) {
-      ctx.fillStyle = `rgba(255, 235, 59, ${flashIntensity * 0.12})`;
+      // 입체적인 핀볼 유리 덮개 반사광 (Glass Reflection)
+      const glassGrad = ctx.createLinearGradient(0, 0, V_WIDTH, V_HEIGHT);
+      glassGrad.addColorStop(0, "rgba(255, 255, 255, 0.08)");
+      glassGrad.addColorStop(0.3, "rgba(255, 255, 255, 0.01)");
+      glassGrad.addColorStop(0.7, "rgba(0, 0, 0, 0.12)");
+      glassGrad.addColorStop(1, "rgba(0, 0, 0, 0.32)");
+      ctx.fillStyle = glassGrad;
+      ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+    } else {
+      // 이미지 로드 전 또는 대체 그라디언트
+      const grad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+      grad.addColorStop(0, theme.bgGradient[0]);
+      grad.addColorStop(0.5, theme.bgGradient[1]);
+      grad.addColorStop(1, theme.bgGradient[2]);
+      ctx.fillStyle = grad;
       ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
     }
 
-    // 캐비닛 양쪽 사이드 크롬 몰딩 (첨부 사진의 은색 메탈 몰딩)
-    ctx.fillStyle = "linear-gradient(to right, #444, #bbb, #333)";
-    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
-    ctx.fillRect(0, 0, 18, V_HEIGHT);
-    ctx.fillRect(V_WIDTH - 18, 0, 18, V_HEIGHT);
+    // 범퍼/슬링샷 충돌 시 테이블 전체 전구 플래시 블룸 발광
+    if (flashIntensity > 0) {
+      ctx.fillStyle = `rgba(255, 240, 160, ${flashIntensity * 0.28})`;
+      ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+    }
   }
 
   // 2. 바닥 화살표 인서트 조명 (Insert Arrows)
@@ -317,13 +329,13 @@ const MapRenderer = (() => {
     ctx.restore();
   }
 
-  // 외곽 벽면 & 레일
+  // 외곽 벽면 & 레일 (실사 핀볼 메탈릭 와이어 레일 스타일)
   function renderWalls(gameState, theme) {
     ctx.save();
-    ctx.strokeStyle = theme.wallColor;
-    ctx.lineWidth = 4;
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.5)";
+    ctx.lineWidth = 2.5;
     ctx.shadowColor = theme.wallColor;
-    ctx.shadowBlur = 10 + flashIntensity * 8;
+    ctx.shadowBlur = 6 + flashIntensity * 8;
     ctx.lineCap = "round";
 
     // 상단 아치 곡면
