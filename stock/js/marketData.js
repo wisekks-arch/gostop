@@ -632,6 +632,106 @@ const MarketDataEngine = (() => {
     return stock;
   }
 
+  // 최신 실제 주요 시장 지수 캐시 (초기 렌더링 및 오프라인 폴백용 최신 2026년 실제 데이터)
+  let liveIndicesCache = [
+    { name: "코스피 (KOSPI)", val: "5,929.98", change: "-82.46 (-1.37%)", up: false, sym: "^KS11" },
+    { name: "코스닥 (KOSDAQ)", val: "752.73", change: "-18.55 (-2.41%)", up: false, sym: "^KQ11" },
+    { name: "S&P 500", val: "7,743.98", change: "-13.19 (-0.17%)", up: false, sym: "^GSPC" },
+    { name: "나스닥 (NASDAQ)", val: "26,549.85", change: "-153.01 (-0.57%)", up: false, sym: "^IXIC" }
+  ];
+
+  /**
+   * [신규 기능] 실제 글로벌 금융 API(야후 파이낸스 / 공인 시세) 연동 4대 지수 실시간 조회
+   */
+  async function fetchLiveMarketIndices() {
+    const symbols = [
+      { name: "코스피 (KOSPI)", sym: "^KS11" },
+      { name: "코스닥 (KOSDAQ)", sym: "^KQ11" },
+      { name: "S&P 500", sym: "^GSPC" },
+      { name: "나스닥 (NASDAQ)", sym: "^IXIC" }
+    ];
+
+    const proxies = [
+      url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+    ];
+
+    const updatedList = [];
+
+    for (const item of symbols) {
+      let fetched = null;
+      const targetUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(item.sym)}?interval=1d&range=5d`;
+
+      // 1. 직접 호출 시도
+      try {
+        const controller = new AbortController();
+        const tid = setTimeout(() => controller.abort(), 2500);
+        const res = await fetch(targetUrl, { signal: controller.signal });
+        clearTimeout(tid);
+        if (res.ok) {
+          const d = await res.json();
+          fetched = d?.chart?.result?.[0]?.meta;
+        }
+      } catch (e) {}
+
+      // 2. CORS 프록시 풀 순회
+      if (!fetched) {
+        for (const makeProxy of proxies) {
+          try {
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 3000);
+            const res = await fetch(makeProxy(targetUrl), { signal: controller.signal });
+            clearTimeout(tid);
+            if (res.ok) {
+              const d = await res.json();
+              if (d?.chart?.result?.[0]?.meta) {
+                fetched = d.chart.result[0].meta;
+                break;
+              }
+            }
+          } catch (e) {}
+        }
+      }
+
+      if (fetched && fetched.regularMarketPrice) {
+        const price = fetched.regularMarketPrice;
+        const prevClose = fetched.chartPreviousClose || fetched.previousClose || price;
+        const diff = price - prevClose;
+        const rate = prevClose > 0 ? (diff / prevClose) * 100 : 0;
+        const isUp = diff >= 0;
+
+        const formattedPrice = price.toLocaleString(undefined, {
+          minimumFractionDigits: 2,
+          maximumFractionDigits: 2
+        });
+        const formattedDiff = (isUp ? "+" : "") + diff.toFixed(2);
+        const formattedRate = (isUp ? "+" : "") + rate.toFixed(2) + "%";
+
+        updatedList.push({
+          name: item.name,
+          val: formattedPrice,
+          change: `${formattedDiff} (${formattedRate})`,
+          up: isUp,
+          sym: item.sym
+        });
+      } else {
+        const cached = liveIndicesCache.find(c => c.sym === item.sym);
+        if (cached) updatedList.push(cached);
+      }
+    }
+
+    if (updatedList.length > 0) {
+      liveIndicesCache = updatedList;
+    }
+
+    return liveIndicesCache;
+  }
+
+  function getCachedMarketIndices() {
+    return liveIndicesCache;
+  }
+
   return {
     getAllStocks,
     getStockByCode,
@@ -645,6 +745,8 @@ const MarketDataEngine = (() => {
     resetToDefaultStocks,
     fetchRealCandlesFromApi,
     loadRealCandlesAsync,
+    fetchLiveMarketIndices,
+    getCachedMarketIndices,
     simulateTick
   };
 })();

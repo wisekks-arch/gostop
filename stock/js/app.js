@@ -154,24 +154,40 @@ document.addEventListener("DOMContentLoaded", () => {
     updateHeaderAssets();
   }
 
-  function initMarketTicker() {
-    const tickerContainer = document.getElementById("marketTickerBanner");
-    if (!tickerContainer) return;
-
-    const indices = [
-      { name: "코스피 (KOSPI)", val: "2,612.45", change: "+14.20 (+0.55%)", up: true },
-      { name: "코스닥 (KOSDAQ)", val: "745.80", change: "-3.15 (-0.42%)", up: false },
-      { name: "S&P 500", val: "5,823.50", change: "+21.10 (+0.36%)", up: true },
-      { name: "나스닥 (NASDAQ)", val: "18,518.60", change: "+98.40 (+0.54%)", up: true }
-    ];
-
-    tickerContainer.innerHTML = indices.map(idx => `
+  function renderTickerItems(container, indices) {
+    if (!container || !indices) return;
+    container.innerHTML = indices.map(idx => `
       <div class="ticker-chip">
         <div class="ticker-name">${idx.name}</div>
         <div class="ticker-val">${idx.val}</div>
         <div class="ticker-change ${idx.up ? 'up' : 'down'}">${idx.change}</div>
       </div>
     `).join("");
+  }
+
+  async function refreshMarketTicker() {
+    const tickerContainer = document.getElementById("marketTickerBanner");
+    if (!tickerContainer) return;
+
+    // 1단계: 캐시된 실제 지수 즉시 렌더링
+    const cached = MarketDataEngine.getCachedMarketIndices();
+    renderTickerItems(tickerContainer, cached);
+
+    // 2단계: 글로벌 금융 API 실시간 수신 및 자동 갱신
+    try {
+      const liveData = await MarketDataEngine.fetchLiveMarketIndices();
+      if (liveData && liveData.length > 0) {
+        renderTickerItems(tickerContainer, liveData);
+      }
+    } catch (e) {
+      console.warn("실시간 시장 지수 동기화 경고:", e);
+    }
+  }
+
+  function initMarketTicker() {
+    refreshMarketTicker();
+    // 60초마다 최신 실제 시장 지수 자동 갱신
+    setInterval(refreshMarketTicker, 60000);
   }
 
   function initTradingRoom() {
@@ -895,6 +911,7 @@ document.addEventListener("DOMContentLoaded", () => {
         updateHeaderAssets();
         renderPortfolioView();
         renderRebalancingView();
+        refreshMarketTicker();
 
         showToast(`✅ ${res.successCount}개 종목의 최신 실시간 시장 시세가 성공적으로 동기화되었습니다!`, "toast-success");
       } catch (err) {
@@ -1692,6 +1709,7 @@ document.addEventListener("DOMContentLoaded", () => {
         renderStockList();
         renderPortfolioView();
         renderRebalancingView();
+        refreshMarketTicker();
       }
     });
   }
