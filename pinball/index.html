@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#060713">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Pinball Rush (핀볼 러시) - 모바일 아케이드 핀볼</title>
+  <link rel="stylesheet" href="css/style.css?v=20261029_1645">
+</head>
+<body>
+
+  <!-- 메인 게임 컨테이너 (스마트폰 세로 아케이드 최적화) -->
+  <div class="game-container">
+
+    <!-- 상단 HUD 오버레이 -->
+    <header class="hud-header">
+      <div class="hud-score-box">
+        <span class="hud-label">SCORE</span>
+        <span id="hudScore" class="hud-score">0</span>
+      </div>
+
+      <div class="hud-center">
+        <div id="hudCombo" class="hud-combo-badge">x1</div>
+        <span id="hudThemeName" class="hud-theme-pill">월드 1: 클래식</span>
+      </div>
+
+      <div class="hud-right">
+        <div id="hudBalls" class="hud-balls">● ● ●</div>
+        <button id="btnSoundToggle" class="hud-icon-btn" aria-label="사운드 토글">🔊</button>
+      </div>
+    </header>
+
+    <!-- 핀볼 캔버스 뷰포트 -->
+    <main class="canvas-wrapper">
+      <canvas id="pinballCanvas"></canvas>
+    </main>
+
+    <!-- 액티브 스킬 슬롯 바 (5대 스킬) -->
+    <nav class="skills-bar" aria-label="스킬 슬롯">
+      <button class="skill-btn" data-skill="TIME_SLOW" title="타임 슬로우">
+        <span class="skill-icon">⏱️</span>
+        <span class="skill-label">슬로우</span>
+      </button>
+      <button class="skill-btn" data-skill="MULTIBALL" title="멀티볼">
+        <span class="skill-icon">🔮</span>
+        <span class="skill-label">멀티볼</span>
+      </button>
+      <button class="skill-btn" data-skill="MAGNET" title="자석 플리퍼">
+        <span class="skill-icon">🧲</span>
+        <span class="skill-label">자석</span>
+      </button>
+      <button class="skill-btn" data-skill="SCORE_BOOST" title="점수 2배">
+        <span class="skill-icon">⚡</span>
+        <span class="skill-label">부스트</span>
+      </button>
+      <button class="skill-btn" data-skill="SHIELD" title="세이프 실드">
+        <span class="skill-icon">🛡️</span>
+        <span class="skill-label">실드</span>
+      </button>
+    </nav>
+
+    <!-- 모바일 터치 플리퍼 조작 영역 -->
+    <div class="touch-controls">
+      <div id="touchLeftFlipper" class="touch-flipper">
+        <span class="touch-hint">◀ L TAP</span>
+      </div>
+      <div id="touchRightFlipper" class="touch-flipper">
+        <span class="touch-hint">R TAP ▶</span>
+      </div>
+    </div>
+
+    <!-- 우측 하단 플런저 (발사 스프링 장전기) -->
+    <div class="plunger-control-box">
+      <div class="plunger-track">
+        <div id="plungerHandle" class="plunger-knob">▼</div>
+      </div>
+      <span style="font-size: 0.62rem; color: var(--text-secondary); margin-top: 4px; font-weight: 700;">발사</span>
+    </div>
+
+    <!-- 모달 1: 메인 로비 화면 -->
+    <div id="modalLobby" class="modal-overlay active">
+      <div class="modal-card">
+        <div style="text-align: center; margin-bottom: 0.5rem;">
+          <h1 class="modal-title" style="font-size: 2rem; letter-spacing: 1px; margin-bottom: 0.2rem;">
+            PINBALL RUSH
+          </h1>
+          <p style="font-size: 0.85rem; color: var(--accent-magenta); font-weight: 700;">
+            ⚡ 정밀 물리 & 네온 아케이드 핀볼 ⚡
+          </p>
+        </div>
+
+        <!-- 유저 프로필 카드 -->
+        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 10px; padding: 0.75rem 1rem; display: flex; justify-content: space-between; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <span style="font-size: 1.5rem;">👑</span>
+            <div>
+              <div id="userLevelDisplay" style="font-weight: 800; font-size: 0.95rem; color: var(--accent-gold);">Lv.1</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">초보 러셔</div>
+            </div>
+          </div>
+          <div style="text-align: right;">
+            <div style="font-size: 0.72rem; color: var(--text-secondary);">보유 골드</div>
+            <div style="font-weight: 900; color: #ffeb3b; font-size: 1.05rem;">
+              <span id="userGoldDisplay">1,500</span> G
+            </div>
+          </div>
+        </div>
+
+        <button id="btnStartGame" class="btn-primary" style="margin-top: 0.5rem;">
+          🚀 게임 시작 (PLAY NOW)
+        </button>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;">
+          <button id="btnOpenStage" class="btn-secondary">
+            🗺️ 스테이지 선택
+          </button>
+          <button id="btnOpenShop" class="btn-secondary">
+            🛒 상점 & 성장
+          </button>
+        </div>
+
+        <button id="btnOpenRank" class="btn-secondary" style="width: 100%;">
+          🏆 실시간 랭킹 순위표
+        </button>
+
+        <div style="font-size: 0.75rem; color: var(--text-muted); text-align: center; line-height: 1.4; margin-top: 0.25rem;">
+          💡 조작 안내: 좌/우 화면 터치(플리퍼), 길게 누르기(공 트래핑 홀딩), 우측 손잡이 아래로 드래그(발사)
+        </div>
+      </div>
+    </div>
+
+    <!-- 모달 2: 스테이지 / 테마 선택 -->
+    <div id="modalStage" class="modal-overlay">
+      <div class="modal-card" style="max-height: 85vh; overflow-y: auto;">
+        <h2 class="modal-title">🗺️ 테마 월드 선택</h2>
+        <div id="stageListContainer" style="display: flex; flex-direction: column;">
+          <!-- JS 렌더링 -->
+        </div>
+        <button class="btn-primary btn-close-modal" style="margin-top: 0.5rem;">
+          선택 완료 및 닫기
+        </button>
+      </div>
+    </div>
+
+    <!-- 모달 3: 상점 & RPG 업그레이드 -->
+    <div id="modalShop" class="modal-overlay">
+      <div class="modal-card" style="max-height: 85vh; overflow-y: auto;">
+        <h2 class="modal-title">🛒 상점 & 핀볼 업그레이드</h2>
+
+        <!-- 업그레이드 1: 공격력 -->
+        <div class="stage-card" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 800; color: var(--accent-cyan);">💥 핀볼 타격 공격력</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">보스 타격 데미지 및 기본 점수 증가</div>
+            <div id="lvlUpgradePower" style="font-size: 0.8rem; color: var(--accent-gold); font-weight: 700; margin-top: 2px;">Lv.1</div>
+          </div>
+          <button class="btn-buy-upgrade" data-type="power" style="background: var(--accent-cyan); color: #000; border: none; padding: 0.45rem 0.75rem; border-radius: 6px; font-weight: 800; cursor: pointer;">
+            <span id="costUpgradePower">800 G</span>
+          </button>
+        </div>
+
+        <!-- 업그레이드 2: 콤보 한도 -->
+        <div class="stage-card" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 800; color: var(--accent-magenta);">🔥 최대 콤보 배수</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">연속 타격 시 도달 가능한 콤보 배수 확대</div>
+            <div id="lvlUpgradeCombo" style="font-size: 0.8rem; color: var(--accent-gold); font-weight: 700; margin-top: 2px;">Lv.5</div>
+          </div>
+          <button class="btn-buy-upgrade" data-type="comboMax" style="background: var(--accent-magenta); color: #fff; border: none; padding: 0.45rem 0.75rem; border-radius: 6px; font-weight: 800; cursor: pointer;">
+            <span id="costUpgradeCombo">1,200 G</span>
+          </button>
+        </div>
+
+        <!-- 업그레이드 3: 보너스 확률 -->
+        <div class="stage-card" style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div style="font-weight: 800; color: var(--accent-gold);">🍀 보너스 골드 획득률</div>
+            <div style="font-size: 0.75rem; color: var(--text-secondary);">게임 종료 시 보너스 재화 정산 비율 증가</div>
+            <div id="lvlUpgradeBonus" style="font-size: 0.8rem; color: var(--accent-gold); font-weight: 700; margin-top: 2px;">Lv.1</div>
+          </div>
+          <button class="btn-buy-upgrade" data-type="bonusRate" style="background: var(--accent-gold); color: #000; border: none; padding: 0.45rem 0.75rem; border-radius: 6px; font-weight: 800; cursor: pointer;">
+            <span id="costUpgradeBonus">1,000 G</span>
+          </button>
+        </div>
+
+        <button class="btn-primary btn-close-modal" style="margin-top: 0.5rem;">
+          상점 나가기
+        </button>
+      </div>
+    </div>
+
+    <!-- 모달 4: 실시간 랭킹 순위표 -->
+    <div id="modalRank" class="modal-overlay">
+      <div class="modal-card">
+        <h2 class="modal-title">🏆 명예의 전당 (RANKING)</h2>
+        <div id="rankListContainer">
+          <!-- JS 렌더링 -->
+        </div>
+        <button class="btn-primary btn-close-modal" style="margin-top: 0.75rem;">
+          닫기
+        </button>
+      </div>
+    </div>
+
+    <!-- 모달 5: 게임 오버 결과 창 -->
+    <div id="modalGameOver" class="modal-overlay">
+      <div class="modal-card" style="text-align: center;">
+        <h2 class="modal-title" style="color: var(--accent-magenta); font-size: 1.6rem;">
+          GAME OVER
+        </h2>
+        <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.5rem;">
+          볼이 모두 소진되었습니다!
+        </p>
+
+        <div style="background: var(--bg-tertiary); border: 1px solid var(--border-color); border-radius: 12px; padding: 1rem; margin-bottom: 0.75rem;">
+          <div style="font-size: 0.75rem; color: var(--text-secondary);">최종 획득 점수</div>
+          <div id="goFinalScore" style="font-size: 1.8rem; font-weight: 900; color: var(--accent-cyan); text-shadow: var(--glow-cyan); margin-bottom: 0.5rem;">
+            0
+          </div>
+          <div style="display: flex; justify-content: space-around; font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.08); padding-top: 0.5rem;">
+            <div>
+              <span style="color: var(--text-secondary);">최고 기록:</span>
+              <strong id="goHighScore" style="color: #fff;">0</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">보상:</span>
+              <strong id="goEarnedGold" style="color: var(--accent-gold);">+0 G</strong>
+            </div>
+            <div>
+              <span style="color: var(--text-secondary);">경험치:</span>
+              <strong id="goEarnedExp" style="color: var(--accent-green);">+0 EXP</strong>
+            </div>
+          </div>
+        </div>
+
+        <button id="btnRetry" class="btn-primary" style="width: 100%; margin-bottom: 0.4rem;">
+          🔄 다시 도전하기
+        </button>
+        <button id="btnLobbyReturn" class="btn-secondary" style="width: 100%;">
+          🏠 메인 로비로 이동
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- 스크립트 모듈 로드 -->
+  <script src="js/audioManager.js?v=20261029_1645"></script>
+  <script src="js/physicsEngine.js?v=20261029_1645"></script>
+  <script src="js/worldThemes.js?v=20261029_1645"></script>
+  <script src="js/mapRenderer.js?v=20261029_1645"></script>
+  <script src="js/skillEngine.js?v=20261029_1645"></script>
+  <script src="js/gameEngine.js?v=20261029_1645"></script>
+  <script src="js/app.js?v=20261029_1645"></script>
+
+</body>
+</html>
