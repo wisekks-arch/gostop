@@ -106,6 +106,53 @@ const RebalancingEngine = (() => {
   };
 
   /**
+   * 일봉 캔들스틱 기반 실제 RSI(Relative Strength Index) 정밀 산출
+   */
+  function calculateRSI(candles, period = 14) {
+    if (!candles || candles.length < 2) return 50.0;
+    const closes = candles.map(c => c.close).filter(p => typeof p === "number" && !isNaN(p));
+    if (closes.length < 2) return 50.0;
+
+    const n = Math.min(period, closes.length - 1);
+    if (n < 2) return 50.0;
+
+    const recentCloses = closes.slice(-n - 1);
+    let totalGain = 0;
+    let totalLoss = 0;
+
+    for (let i = 1; i < recentCloses.length; i++) {
+      const diff = recentCloses[i] - recentCloses[i - 1];
+      if (diff > 0) {
+        totalGain += diff;
+      } else {
+        totalLoss += Math.abs(diff);
+      }
+    }
+
+    if (totalLoss === 0) return 100.0;
+    if (totalGain === 0) return 0.0;
+
+    const avgGain = totalGain / n;
+    const avgLoss = totalLoss / n;
+    const rs = avgGain / avgLoss;
+    const rsi = 100 - (100 / (1 + rs));
+
+    return Number(rsi.toFixed(1));
+  }
+
+  /**
+   * 이동평균선(MA) 계산
+   */
+  function calculateMA(candles, period) {
+    if (!candles || candles.length === 0) return 0;
+    const closes = candles.map(c => c.close).filter(p => typeof p === "number" && !isNaN(p));
+    if (closes.length === 0) return 0;
+    const slice = closes.slice(-period);
+    const sum = slice.reduce((acc, v) => acc + v, 0);
+    return Math.round(sum / slice.length);
+  }
+
+  /**
    * ============================================================
    * [옵션 1] 개별 단일 종목 리밸런싱 전략 분석기 (Single Stock Strategy)
    * ============================================================
@@ -125,8 +172,22 @@ const RebalancingEngine = (() => {
     const profitRate = avgPrice > 0 ? Number((((currentPrice - avgPrice) / avgPrice) * 100).toFixed(2)) : 0;
     const weightInPortfolio = summary.totalAssets > 0 ? Number(((evalAmount / summary.totalAssets) * 100).toFixed(1)) : 0;
 
-    // 1. 향후 시장 전망 및 지표 진단
-    const rsi = stock.rsi;
+    // 1. 실제 일봉 캔들스틱 데이터를 바탕으로 동적 RSI 및 이평선 계산 (설정 파라미터 rsiPeriod, ma 주기 즉시 반영)
+    const candles = (typeof MarketDataEngine !== "undefined" && MarketDataEngine.getCandles) 
+      ? MarketDataEngine.getCandles(stockCode, "1D") 
+      : [];
+
+    let rsi = calculateRSI(candles, activeConfig.rsiPeriod);
+    if (isNaN(rsi) || rsi <= 0 || rsi >= 100) {
+      rsi = typeof stock.rsi === "number" ? stock.rsi : 50.0;
+    }
+    stock.rsi = rsi;
+
+    const maShort = calculateMA(candles, activeConfig.maShort);
+    const maMid = calculateMA(candles, activeConfig.maMid);
+    const maLong = calculateMA(candles, activeConfig.maLong);
+    const maDisparity = maMid > 0 ? Number((((currentPrice - maMid) / maMid) * 100).toFixed(1)) : 0;
+
     let signal = "HOLD"; // BUY, SELL, HOLD, TAKE_PROFIT, STOP_LOSS
     let signalText = "비중 유지 (관망)";
     let outlookScore = 60; // 0 ~ 100
@@ -136,19 +197,20 @@ const RebalancingEngine = (() => {
     // 기술적 지표 & 수익률 기반 전망 판정 로직 (사용자 설정 지표 반영)
     if (rsi >= activeConfig.rsiOverbought) {
       signal = "TAKE_PROFIT";
-      signalText = `부분 익절 권고 (RSI ${activeConfig.rsiOverbought} 이상 과매수 구간)`;
+      signalText = `부분 익절 권고 (RSI ${rsi}pt ≥ 기준 ${activeConfig.rsiOverbought}pt 과매수)`;
       outlookScore = 45;
-      outlookDesc = `현재 RSI(${rsi})가 설정된 과매수 기준선(${activeConfig.rsiOverbought} pt)을 초과하여 단기 과열 구간에 진입했습니다. 차익 실현 매물이 출회될 가능성이 높습니다.`;
+      outlookDesc = `현재 RSI(${rsi}pt)가 설정된 과매수 기준선(${activeConfig.rsiOverbought}pt)을 초과하여 단기 과열 구간에 진입했습니다. 차익 실현 매물이 출회될 가능성이 높아 분할 매도를 권장합니다.`;
     } else if (rsi <= activeConfig.rsiOversold) {
       signal = "SCALE_IN";
-      signalText = `분할 매수 권고 (RSI ${activeConfig.rsiOversold} 이하 과매도 저평가)`;
+      signalText = `분할 매수 권고 (RSI ${rsi}pt ≤ 기준 ${activeConfig.rsiOversold}pt 과매도)`;
       outlookScore = 80;
-      outlookDesc = `RSI(${rsi}) 기준 설정된 과매도 기준선(${activeConfig.rsiOversold} pt) 이하 국면으로, 기술적 반등 및 저가 매수세 유입이 기대되는 구간입니다.`;
+      outlookDesc = `RSI(${rsi}pt)가 설정된 과매도 기준선(${activeConfig.rsiOversold}pt) 이하 국면으로, 기술적 반등 및 저가 매수세 유입이 기대되는 침체 구간입니다.`;
     } else {
       signal = "HOLD";
       signalText = "보유 및 추세 관망";
       outlookScore = 65;
-      outlookDesc = `현재 견조한 추세를 유지하고 있으며 추가 모멘텀 형성을 대기하는 중립 구간입니다.`;
+      const maDesc = maMid > 0 ? (currentPrice >= maMid ? `생명선(${activeConfig.maMid}일선: ${maMid.toLocaleString()}원) 위에서 견조한 지지` : `생명선(${activeConfig.maMid}일선: ${maMid.toLocaleString()}원) 하회 중 이격도(${maDisparity}%)`) : "추세 대기";
+      outlookDesc = `현재 RSI(${rsi}pt) 기준 중립 구간이며, ${maDesc} 흐름을 유지하고 있어 추가 모멘텀 형성을 대기하는 관망 구간입니다.`;
     }
 
     // 2. 단일 종목 포트폴리오 편중(쏠림도) 진단 (사용자 설정 기준 반영)
@@ -228,7 +290,11 @@ const RebalancingEngine = (() => {
       },
       indicators: {
         rsi,
-        trend: stock.trend,
+        maShort,
+        maMid,
+        maLong,
+        maDisparity,
+        trend: maDisparity > 2 ? `단기 상승추세 (20일선 대비 +${maDisparity}%)` : (maDisparity < -2 ? `단기 조정국면 (20일선 대비 ${maDisparity}%)` : "중립 횡보 박스권"),
         per: stock.per,
         pbr: stock.pbr
       },
@@ -412,6 +478,8 @@ const RebalancingEngine = (() => {
     getConfig,
     saveConfig,
     resetConfig,
+    calculateRSI,
+    calculateMA,
     analyzeSingleStock,
     analyzePortfolioRebalance,
     executeBatchRebalance

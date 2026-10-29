@@ -1169,18 +1169,28 @@ document.addEventListener("DOMContentLoaded", () => {
         return hasB - hasA;
       });
 
+      const activeCfg = RebalancingEngine.getConfig();
       stockListEl.innerHTML = allStocks.map(s => {
         const holding = holdings[s.code];
         const hasHolding = !!holding;
         const isSelected = s.code === code;
+        
+        // 종목별 실제 캔들 기반 동적 분석 지표 산출
+        const itemAnalysis = RebalancingEngine.analyzeSingleStock(s.code);
+        const itemRsi = (itemAnalysis && itemAnalysis.indicators) ? itemAnalysis.indicators.rsi : (s.rsi || 50.0);
+        const isOverbought = itemRsi >= activeCfg.rsiOverbought;
+        const isOversold = itemRsi <= activeCfg.rsiOversold;
+        const statusText = isOverbought ? "과매수" : (isOversold ? "과매도" : "중립");
+        const statusColor = isOverbought ? "var(--up-red)" : (isOversold ? "var(--down-blue)" : "var(--text-muted)");
+
         return `
           <button class="stock-select-btn ${isSelected ? 'active' : ''}" data-code="${s.code}">
             <div>
               <div style="font-weight: 700;">${s.name} ${hasHolding ? '<span style="color: var(--accent-green); font-size: 0.72rem; font-weight: 800;">[보유 ' + holding.qty + '주]</span>' : ''}</div>
-              <div style="font-size: 0.75rem; color: var(--text-secondary);">${s.price.toLocaleString()}원 · RSI ${s.rsi}</div>
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">${s.price.toLocaleString()}원 · RSI ${itemRsi} pt</div>
             </div>
-            <div style="font-size: 0.75rem; font-weight: 700; color: ${s.rsi >= 70 ? 'var(--up-red)' : (s.rsi <= 40 ? 'var(--down-blue)' : 'var(--text-muted)')}">
-              ${s.rsi >= 70 ? '과매수' : (s.rsi <= 40 ? '과매도' : '중립')}
+            <div style="font-size: 0.75rem; font-weight: 700; color: ${statusColor}">
+              ${statusText}
             </div>
           </button>
         `;
@@ -1219,7 +1229,7 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="diagnostic-meter">
           <div style="flex: 1;">
             <div style="font-size: 0.75rem; color: var(--text-secondary);">RSI 과열/침체 지수</div>
-            <div style="font-size: 1.1rem; font-weight: 800; color: ${analysis.indicators.rsi >= 70 ? 'var(--up-red)' : 'var(--down-blue)'}">
+            <div style="font-size: 1.1rem; font-weight: 800; color: ${analysis.indicators.rsi >= activeCfg.rsiOverbought ? 'var(--up-red)' : (analysis.indicators.rsi <= activeCfg.rsiOversold ? 'var(--down-blue)' : 'var(--text-primary)')}">
               ${analysis.indicators.rsi} pt
             </div>
           </div>
@@ -1318,6 +1328,7 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     RebalancingEngine.saveConfig(newCfg);
+    renderRebalancingView();
     showToast("리밸런싱 기술적 지표 & 매매 전략 설정이 성공적으로 저장되었습니다!", "toast-success");
   }
 
