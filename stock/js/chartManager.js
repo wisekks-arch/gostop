@@ -13,6 +13,38 @@ const ChartManager = (() => {
   let mousePos = { x: -1, y: -1 };
   let isHovered = false;
 
+  // [신규 기능] 캔들 줌(Zoom: 크게보기/작게보기) 배율 및 표시 개수 관리
+  let visibleCandleCount = 40; // 기본 표시 개수
+  const MIN_CANDLE_COUNT = 16; // 최대 확대 (봉이 크고 굵어짐 = 크게보기)
+  const MAX_CANDLE_COUNT = 90; // 최대 축소 (과거 긴 기간을 작게 봄 = 작게보기)
+  const DEFAULT_CANDLE_COUNT = 40;
+
+  function zoomIn() {
+    visibleCandleCount = Math.max(MIN_CANDLE_COUNT, visibleCandleCount - 6);
+    render();
+    return getZoomPercentage();
+  }
+
+  function zoomOut() {
+    visibleCandleCount = Math.min(MAX_CANDLE_COUNT, visibleCandleCount + 6);
+    render();
+    return getZoomPercentage();
+  }
+
+  function resetZoom() {
+    visibleCandleCount = DEFAULT_CANDLE_COUNT;
+    render();
+    return 100;
+  }
+
+  function getZoomPercentage() {
+    return Math.round((DEFAULT_CANDLE_COUNT / visibleCandleCount) * 100);
+  }
+
+  function getVisibleCandleCount() {
+    return visibleCandleCount;
+  }
+
   // 보조선 및 작도 상태 관리
   let currentTool = "NONE"; // 'NONE', 'HORIZONTAL', 'TREND', 'FIBONACCI'
   let drawTempStart = null; // 추세선 및 피보나치 시작점 임시 보관
@@ -86,6 +118,16 @@ const ChartManager = (() => {
     canvas.addEventListener("click", (e) => {
       handleCanvasClick(e);
     });
+
+    // [신규 기능] 마우스 휠 줌(크게보기/작게보기) 이벤트
+    canvas.addEventListener("wheel", (e) => {
+      e.preventDefault();
+      if (e.deltaY < 0) {
+        zoomIn();
+      } else {
+        zoomOut();
+      }
+    }, { passive: false });
 
     window.addEventListener("resize", () => {
       resizeCanvas();
@@ -175,8 +217,10 @@ const ChartManager = (() => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const candles = MarketDataEngine.getCandles(currentStockCode, currentTimeframe);
-    if (!candles || candles.length === 0) return;
+    const allCandles = MarketDataEngine.getCandles(currentStockCode, currentTimeframe);
+    if (!allCandles || allCandles.length === 0) return;
+    const sliceCount = Math.min(visibleCandleCount, allCandles.length);
+    const candles = allCandles.slice(-sliceCount);
 
     const width = rect.width;
     const height = rect.height;
@@ -260,8 +304,10 @@ const ChartManager = (() => {
 
     ctx.clearRect(0, 0, width, height);
 
-    const candles = MarketDataEngine.getCandles(currentStockCode, currentTimeframe);
-    if (!candles || candles.length === 0) return;
+    const allCandles = MarketDataEngine.getCandles(currentStockCode, currentTimeframe);
+    if (!allCandles || allCandles.length === 0) return;
+    const sliceCount = Math.min(visibleCandleCount, allCandles.length);
+    const candles = allCandles.slice(-sliceCount);
 
     const isLight = document.body.classList.contains("light-theme");
     const mainHeight = height * 0.72;
@@ -292,9 +338,10 @@ const ChartManager = (() => {
     const candleWidth = Math.max((chartWidth / candleCount) * 0.7, 3);
     const stepX = chartWidth / candleCount;
 
-    // 2. 볼린저 밴드 (활성화 시 렌더링)
+    // 2. 볼린저 밴드 (전체 히스토리 기반 계산 후 슬라이스)
     if (showBollingerBands) {
-      const bb = calculateBollingerBands(candles, 20, 2);
+      const bbAll = calculateBollingerBands(allCandles, 20, 2);
+      const bb = bbAll.slice(-sliceCount);
       drawBollingerBands(candles, bb, stepX, minPrice, adjustedRange, mainHeight);
     }
 
@@ -333,14 +380,28 @@ const ChartManager = (() => {
       ctx.fillRect(x - candleWidth / 2, bodyTop, candleWidth, bodyHeight);
     });
 
-    // 5. 이동평균선 (MA 5, 20, 60)
-    const ma5 = calculateMA(candles, 5);
-    const ma20 = calculateMA(candles, 20);
-    const ma60 = calculateMA(candles, 60);
+    // 5. 이동평균선 (전체 히스토리 기반 MA 5, 20, 60 연속성 유지 계산)
+    const ma5All = calculateMA(allCandles, 5);
+    const ma20All = calculateMA(allCandles, 20);
+    const ma60All = calculateMA(allCandles, 60);
+
+    const ma5 = ma5All.slice(-sliceCount);
+    const ma20 = ma20All.slice(-sliceCount);
+    const ma60 = ma60All.slice(-sliceCount);
 
     drawLine(candles, ma5, stepX, minPrice, adjustedRange, mainHeight, "#d29922");
     drawLine(candles, ma20, stepX, minPrice, adjustedRange, mainHeight, "#f0883e");
     drawLine(candles, ma60, stepX, minPrice, adjustedRange, mainHeight, "#a371f7");
+
+    // [신규 기능] 좌상단 줌 배율 및 데이터 출처 뱃지 렌더링
+    ctx.save();
+    ctx.fillStyle = isLight ? "rgba(0, 0, 0, 0.65)" : "rgba(255, 255, 255, 0.75)";
+    ctx.font = "11px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    const zoomPct = getZoomPercentage();
+    const stockObj = MarketDataEngine.getStock(currentStockCode);
+    const sourceText = stockObj && stockObj.source ? `[${stockObj.source}]` : "[실제 증시 시세]";
+    ctx.fillText(`배율: ${zoomPct}% (${candles.length}봉) · ${sourceText}`, 12, 18);
+    ctx.restore();
 
     // 6. [보조선] 내 보유 평균 매입단가선 (황금색 점선 및 뱃지)
     if (showMyBuyPrice) {
@@ -620,6 +681,11 @@ const ChartManager = (() => {
     toggleBollingerBands,
     toggleMyBuyPrice,
     clearDrawings,
+    zoomIn,
+    zoomOut,
+    resetZoom,
+    getZoomPercentage,
+    getVisibleCandleCount,
     render
   };
 })();

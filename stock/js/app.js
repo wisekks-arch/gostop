@@ -191,7 +191,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     // [신규 기능] 차트 주기(일봉 1D / 주봉 1W / 60분봉 60M) 전환 이벤트 바인딩
-    const timeframeBtns = document.querySelectorAll(".timeframe-btn");
+    const timeframeBtns = document.querySelectorAll(".timeframe-btn[data-timeframe]");
     timeframeBtns.forEach(btn => {
       btn.addEventListener("click", () => {
         timeframeBtns.forEach(b => b.classList.remove("active"));
@@ -200,8 +200,42 @@ document.addEventListener("DOMContentLoaded", () => {
         ChartManager.setTimeframe(tf);
         const tfName = tf === "1W" ? "주봉 (1W)" : (tf === "60M" ? "60분봉 (60M)" : "일봉 (1D)");
         showToast(`차트 주기가 '${tfName}'으로 전환되었습니다.`, "toast-info");
+
+        // 실제 증시 API 데이터 최신 동기화 요청
+        if (currentStockCode) {
+          MarketDataEngine.loadRealCandlesAsync(currentStockCode, tf, () => {
+            ChartManager.render();
+            updateStockDetailHeader();
+          });
+        }
       });
     });
+
+    // [신규 기능] 차트 크게보기(+) / 작게보기(-) / 기본배율(100%) 줌 버튼 이벤트 바인딩
+    const btnZoomIn = document.getElementById("btnZoomIn");
+    const btnZoomOut = document.getElementById("btnZoomOut");
+    const btnZoomReset = document.getElementById("btnZoomReset");
+
+    if (btnZoomIn) {
+      btnZoomIn.addEventListener("click", () => {
+        const pct = ChartManager.zoomIn();
+        showToast(`차트 확대 (크게보기): ${pct}%`, "toast-info");
+      });
+    }
+
+    if (btnZoomOut) {
+      btnZoomOut.addEventListener("click", () => {
+        const pct = ChartManager.zoomOut();
+        showToast(`차트 축소 (작게보기): ${pct}%`, "toast-info");
+      });
+    }
+
+    if (btnZoomReset) {
+      btnZoomReset.addEventListener("click", () => {
+        const pct = ChartManager.resetZoom();
+        showToast(`차트 기본 배율 복원: ${pct}%`, "toast-info");
+      });
+    }
   }
 
   // ============================================================
@@ -353,6 +387,13 @@ document.addEventListener("DOMContentLoaded", () => {
     updateStockDetailHeader();
     updateOrderBook();
     ChartManager.setStock(code);
+
+    // [신규 기능] 선택된 종목의 실제 금융 API 캔들 비동기 확인 및 최신화
+    const curTf = ChartManager.getCurrentTimeframe ? ChartManager.getCurrentTimeframe() : "1D";
+    MarketDataEngine.loadRealCandlesAsync(code, curTf, () => {
+      ChartManager.render();
+      updateStockDetailHeader();
+    });
 
     const stock = MarketDataEngine.getStockByCode(code);
     const priceInput = document.getElementById("orderPriceInput");

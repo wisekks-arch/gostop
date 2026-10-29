@@ -256,11 +256,144 @@ const MarketDataEngine = (() => {
     return false;
   }
 
-  // 종목별 타임프레임 캔들 빌드 헬퍼
+  // 종목별 타임프레임 캔들 빌드 헬퍼 (실제 증시 거래소 데이터 우선 탑재)
   function buildCandlesForStock(stock) {
+    const archive = (typeof window !== "undefined" && window.REAL_CANDLES_ARCHIVE) || {};
     ["1D", "1W", "60M"].forEach(tf => {
-      candleHistoryMap.set(`${stock.code}_${tf}`, generateCandles(stock.price, tf));
+      const key = `${stock.code}_${tf}`;
+      if (archive[key] && Array.isArray(archive[key]) && archive[key].length > 0) {
+        // 실제 증시 캔들스틱 데이터 즉시 장착
+        candleHistoryMap.set(key, JSON.parse(JSON.stringify(archive[key])));
+        stock.source = "실제 증시 시세";
+      } else {
+        // 아카이브에 없는 종목: 현실적 캔들 생성 후 비동기 실제 API 호출
+        candleHistoryMap.set(key, generateCandles(stock.price, tf));
+        fetchRealCandlesFromApi(stock.code, tf);
+      }
     });
+  }
+
+  // 실제 외부 API(네이버 금융 fchart / 야후 파이낸스) 비동기 호출 커넥터
+  async function fetchRealCandlesFromApi(code, timeframe = "1D") {
+    if (!code) return null;
+    const isDomestic = /^[0-9]+$/.test(code);
+    const key = `${code}_${timeframe}`;
+
+    const proxies = [
+      url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+      url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
+      url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`
+    ];
+
+    let realCandles = null;
+
+    if (isDomestic && (timeframe === "1D" || timeframe === "1W")) {
+      // 국내 주식 일봉/주봉: 네이버 금융 공식 fchart API
+      const count = timeframe === "1W" ? 35 : 40;
+      const tfParam = timeframe === "1W" ? "week" : "day";
+      const naverUrl = `https://fchart.stock.naver.com/sise.nhn?symbol=${code}&timeframe=${tfParam}&count=${count}&requestType=0`;
+
+      for (const makeProxy of proxies) {
+        try {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 4000);
+          const res = await fetch(makeProxy(naverUrl), { signal: controller.signal });
+          clearTimeout(tid);
+          if (res.ok) {
+            const xml = await res.text();
+            const regex = /<item\s+data="([^"]+)"\s*\/>/g;
+            let match;
+            const items = [];
+            while ((match = regex.exec(xml)) !== null) {
+              const p = match[1].split('|');
+              const d = p[0];
+              const time = d.substring(0, 4) + '-' + d.substring(4, 6) + '-' + d.substring(6, 8) + (timeframe === '1W' ? ' (주)' : '');
+              items.push({
+                time,
+                open: parseInt(p[1], 10),
+                high: parseInt(p[2], 10),
+                low: parseInt(p[3], 10),
+                close: parseInt(p[4], 10),
+                volume: parseInt(p[5], 10)
+              });
+            }
+            if (items.length > 0) {
+              realCandles = items;
+              break;
+            }
+          }
+        } catch (e) {}
+      }
+    } else {
+      // 국내 주식 60분봉 또는 해외 주식: 야후 파이낸스 실시간 차트 API
+      const symbol = isDomestic ? `${code}.KS` : code;
+      const range = timeframe === "1W" ? "1y" : (timeframe === "60M" ? "1mo" : "3mo");
+      const interval = timeframe === "1W" ? "1wk" : (timeframe === "60M" ? "60m" : "1d");
+      const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${symbol}?interval=${interval}&range=${range}`;
+
+      for (const makeProxy of proxies) {
+        try {
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 4000);
+          const res = await fetch(makeProxy(yahooUrl), { signal: controller.signal });
+          clearTimeout(tid);
+          if (res.ok) {
+            const data = await res.json();
+            const result = data && data.chart && data.chart.result && data.chart.result[0];
+            const timestamps = result && result.timestamp;
+            const quote = result && result.indicators && result.indicators.quote && result.indicators.quote[0];
+            if (timestamps && quote) {
+              const items = [];
+              for (let i = 0; i < timestamps.length; i++) {
+                if (quote.close[i] == null) continue;
+                const d = new Date(timestamps[i] * 1000);
+                let timeLabel = d.toISOString().split('T')[0];
+                if (timeframe === '1W') timeLabel += ' (주)';
+                if (timeframe === '60M') {
+                  const m = String(d.getMonth() + 1).padStart(2, '0');
+                  const day = String(d.getDate()).padStart(2, '0');
+                  const h = String(d.getHours()).padStart(2, '0');
+                  timeLabel = `${m}/${day} ${h}:00`;
+                }
+                items.push({
+                  time: timeLabel,
+                  open: Math.round(quote.open[i] * 100) / 100,
+                  high: Math.round(quote.high[i] * 100) / 100,
+                  low: Math.round(quote.low[i] * 100) / 100,
+                  close: Math.round(quote.close[i] * 100) / 100,
+                  volume: quote.volume[i] || 0
+                });
+              }
+              if (items.length > 0) {
+                realCandles = items;
+                break;
+              }
+            }
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (realCandles && realCandles.length > 0) {
+      candleHistoryMap.set(key, realCandles);
+      const stock = getStockByCode(code);
+      if (stock) {
+        stock.source = "실제 금융 API";
+        const last = realCandles[realCandles.length - 1];
+        stock.price = last.close;
+      }
+      return realCandles;
+    }
+    return null;
+  }
+
+  // 차트 뷰어용 비동기 실제 캔들 로드
+  async function loadRealCandlesAsync(code, timeframe = "1D", callback) {
+    const candles = await fetchRealCandlesFromApi(code, timeframe);
+    if (candles && typeof callback === "function") {
+      callback(candles);
+    }
+    return candles;
   }
 
   // 최신 가격 동기화 헬퍼 (모든 주기 동시 반영)
@@ -510,6 +643,8 @@ const MarketDataEngine = (() => {
     registerDynamicStock,
     setCustomStockList,
     resetToDefaultStocks,
+    fetchRealCandlesFromApi,
+    loadRealCandlesAsync,
     simulateTick
   };
 })();
