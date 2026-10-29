@@ -1,16 +1,19 @@
 /**
- * Pinball Rush (핀볼 러시) - 오디오 신시사이저 매니저 (audioManager.js)
+ * Pinball Rush (핀볼 러시) - 오디오 신시사이저 & 라스베가스 BGM 엔진 (audioManager.js)
  * Web Audio API를 활용하여 외부 오디오 파일 다운로드 없이
- * 지연시간(Latency) 0초의 경쾌하고 생생한 타격음 및 팡파레를 즉각 합성하여 재생
+ * 지연시간 0초의 경쾌한 타격음과 신나는 125 BPM 라스베가스 아케이드 BGM을 무한 루프 합성 재생
  */
 
 const AudioManager = (() => {
   let ctx = null;
   let masterGain = null;
-  let bgmOsc = null;
   let bgmGain = null;
+  let sfxGain = null;
+
   let isMuted = false;
-  let isUnlocked = false;
+  let isBgmPlaying = false;
+  let bgmIntervalId = null;
+  let bgmStep = 0;
 
   // 오디오 컨텍스트 초기화 (사용자 첫 인터랙션 시 자동 언락)
   function initAudio() {
@@ -18,21 +21,30 @@ const AudioManager = (() => {
       const AudioCtx = window.AudioContext || window.webkitAudioContext;
       if (AudioCtx) {
         ctx = new AudioCtx();
+
         masterGain = ctx.createGain();
-        masterGain.gain.setValueAtTime(0.7, ctx.currentTime);
+        masterGain.gain.setValueAtTime(0.8, ctx.currentTime);
         masterGain.connect(ctx.destination);
+
+        sfxGain = ctx.createGain();
+        sfxGain.gain.setValueAtTime(0.85, ctx.currentTime);
+        sfxGain.connect(masterGain);
+
+        bgmGain = ctx.createGain();
+        bgmGain.gain.setValueAtTime(0.35, ctx.currentTime);
+        bgmGain.connect(masterGain);
       }
     }
     if (ctx && ctx.state === "suspended") {
       ctx.resume().then(() => {
-        isUnlocked = true;
+        if (!isBgmPlaying && !isMuted) startVegasBGM();
       });
     } else if (ctx && ctx.state === "running") {
-      isUnlocked = true;
+      if (!isBgmPlaying && !isMuted) startVegasBGM();
     }
   }
 
-  // 햅틱 진동 헬퍼 (모바일 스마트폰 지원 시)
+  // 햅틱 진동 헬퍼
   function triggerHaptic(pattern) {
     try {
       if (typeof navigator !== "undefined" && navigator.vibrate) {
@@ -40,6 +52,144 @@ const AudioManager = (() => {
       }
     } catch (e) {}
   }
+
+  // ============================================================
+  // 🎵 신나는 라스베가스 아케이드 BGM 엔진 (Web Audio API Synthesizer)
+  // 125 BPM 펑키 베이스라인 + 디스코 킥/스네어 + 네온 신스 아르페지오 루프
+  // ============================================================
+  const BGM_BPM = 125;
+  const STEP_TIME_MS = (60 / BGM_BPM / 4) * 1000; // 16분음표 단위 (~120ms)
+
+  // 16비트 베이스라인 주파수 (E 마이너 펑키 펜타토닉)
+  const BASS_LINE = [
+    82.41, 0, 82.41, 0, 98.0, 0, 110.0, 123.47,
+    82.41, 0, 146.83, 0, 123.47, 110.0, 98.0, 0
+  ];
+
+  // 16비트 아르페지오 리드 멜로디 주파수
+  const ARPEGGIO_LINE = [
+    329.63, 392.0, 493.88, 587.33, 659.25, 493.88, 392.0, 493.88,
+    293.66, 369.99, 440.0, 587.33, 440.0, 369.99, 329.63, 0
+  ];
+
+  function playSynthKick(t) {
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(140, t);
+    osc.frequency.exponentialRampToValueAtTime(38, t + 0.08);
+
+    g.gain.setValueAtTime(0.7, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+
+    osc.connect(g);
+    g.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }
+
+  function playSynthSnare(t) {
+    if (!ctx) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+
+    osc.type = "triangle";
+    osc.frequency.setValueAtTime(220, t);
+    osc.frequency.exponentialRampToValueAtTime(80, t + 0.06);
+
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.07);
+
+    osc.connect(g);
+    g.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + 0.08);
+  }
+
+  function playSynthBassNote(t, freq) {
+    if (!ctx || freq <= 0) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(freq, t);
+
+    g.gain.setValueAtTime(0.35, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.11);
+
+    osc.connect(g);
+    g.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + 0.12);
+  }
+
+  function playSynthArpNote(t, freq) {
+    if (!ctx || freq <= 0) return;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.setValueAtTime(freq, t);
+
+    g.gain.setValueAtTime(0.18, t);
+    g.gain.exponentialRampToValueAtTime(0.001, t + 0.09);
+
+    osc.connect(g);
+    g.connect(bgmGain);
+    osc.start(t);
+    osc.stop(t + 0.1);
+  }
+
+  function bgmTick() {
+    if (!ctx || isMuted || !isBgmPlaying) return;
+    const t = ctx.currentTime;
+    const step = bgmStep % 16;
+
+    // 1. 4온더플로어 킥 드럼 (0, 4, 8, 12박)
+    if (step % 4 === 0) {
+      playSynthKick(t);
+    }
+
+    // 2. 스네어 비트 (4, 12박)
+    if (step === 4 || step === 12) {
+      playSynthSnare(t);
+    }
+
+    // 3. 펑키 베이스라인
+    const bassFreq = BASS_LINE[step];
+    if (bassFreq > 0) {
+      playSynthBassNote(t, bassFreq);
+    }
+
+    // 4. 네온 신스 아르페지오 리드
+    const arpFreq = ARPEGGIO_LINE[step];
+    if (arpFreq > 0) {
+      playSynthArpNote(t, arpFreq);
+    }
+
+    bgmStep++;
+  }
+
+  function startVegasBGM() {
+    if (bgmIntervalId) clearInterval(bgmIntervalId);
+    isBgmPlaying = true;
+    bgmStep = 0;
+    bgmIntervalId = setInterval(bgmTick, STEP_TIME_MS);
+  }
+
+  function stopVegasBGM() {
+    if (bgmIntervalId) {
+      clearInterval(bgmIntervalId);
+      bgmIntervalId = null;
+    }
+    isBgmPlaying = false;
+  }
+
+  // ============================================================
+  // 🔊 인게임 효과음 (SFX)
+  // ============================================================
 
   // 1. 플리퍼 조작음 (기계식 솔레노이드 타격 사운드: "탁/찰칵!")
   function playFlipper(isUp = true) {
@@ -51,7 +201,6 @@ const AudioManager = (() => {
     const gain = ctx.createGain();
 
     if (isUp) {
-      // 플리퍼 올릴 때: 묵직한 솔레노이드 펀치
       osc.type = "triangle";
       osc.frequency.setValueAtTime(220, t);
       osc.frequency.exponentialRampToValueAtTime(70, t + 0.04);
@@ -60,13 +209,12 @@ const AudioManager = (() => {
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.045);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(sfxGain);
       osc.start(t);
       osc.stop(t + 0.05);
 
-      triggerHaptic(12); // 미세 햅틱
+      triggerHaptic(12);
     } else {
-      // 플리퍼 복귀할 때: 가벼운 기계식 클릭
       osc.type = "sine";
       osc.frequency.setValueAtTime(440, t);
       osc.frequency.exponentialRampToValueAtTime(200, t + 0.02);
@@ -75,7 +223,7 @@ const AudioManager = (() => {
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.025);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(sfxGain);
       osc.start(t);
       osc.stop(t + 0.03);
     }
@@ -91,8 +239,7 @@ const AudioManager = (() => {
     const osc2 = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    // 콤보 레벨에 따라 피치 상승
-    const baseFreq = 520 + Math.min(12, comboLevel) * 35;
+    const baseFreq = 540 + Math.min(12, comboLevel) * 38;
 
     osc1.type = "sine";
     osc1.frequency.setValueAtTime(baseFreq, t);
@@ -103,19 +250,19 @@ const AudioManager = (() => {
     osc2.frequency.setValueAtTime(baseFreq * 2.05, t);
     osc2.frequency.exponentialRampToValueAtTime(baseFreq * 0.5, t + 0.12);
 
-    gain.gain.setValueAtTime(0.55, t);
+    gain.gain.setValueAtTime(0.65, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
 
     osc1.connect(gain);
     osc2.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(sfxGain);
 
     osc1.start(t);
     osc2.start(t);
     osc1.stop(t + 0.15);
     osc2.stop(t + 0.15);
 
-    triggerHaptic([20, 10, 20]); // 범퍼 충돌 햅틱
+    triggerHaptic([20, 10, 20]);
   }
 
   // 3. 슬링샷 충돌음 (강력한 고무 탄성 바운스: "퍽-팡!")
@@ -131,11 +278,11 @@ const AudioManager = (() => {
     osc.frequency.setValueAtTime(320, t);
     osc.frequency.exponentialRampToValueAtTime(80, t + 0.07);
 
-    gain.gain.setValueAtTime(0.5, t);
+    gain.gain.setValueAtTime(0.55, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.08);
 
     osc.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(sfxGain);
 
     osc.start(t);
     osc.stop(t + 0.09);
@@ -152,17 +299,17 @@ const AudioManager = (() => {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    const notes = [523.25, 659.25, 783.99, 1046.50]; // 도, 미, 솔, 높은도
+    const notes = [523.25, 659.25, 783.99, 1046.50];
     const freq = notes[noteIndex % notes.length];
 
     osc.type = "sine";
     osc.frequency.setValueAtTime(freq, t);
 
-    gain.gain.setValueAtTime(0.35, t);
+    gain.gain.setValueAtTime(0.38, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
 
     osc.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(sfxGain);
 
     osc.start(t);
     osc.stop(t + 0.26);
@@ -170,29 +317,7 @@ const AudioManager = (() => {
     triggerHaptic(10);
   }
 
-  // 5. 스피너 회전음 (고속 회전 기어 사운드: "치리리링")
-  function playSpinner() {
-    if (isMuted || !ctx) return;
-    initAudio();
-
-    const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    osc.type = "square";
-    osc.frequency.setValueAtTime(800 + Math.random() * 400, t);
-
-    gain.gain.setValueAtTime(0.12, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.03);
-
-    osc.connect(gain);
-    gain.connect(masterGain);
-
-    osc.start(t);
-    osc.stop(t + 0.035);
-  }
-
-  // 6. 플런저 스프링 발사 사운드 ("슈우웅- 쾅!")
+  // 5. 플런저 스프링 발사 사운드 ("슈우웅- 쾅!")
   function playPlungerLaunch(powerRatio = 1) {
     if (isMuted || !ctx) return;
     initAudio();
@@ -205,11 +330,11 @@ const AudioManager = (() => {
     osc.frequency.setValueAtTime(140, t);
     osc.frequency.exponentialRampToValueAtTime(650 * powerRatio, t + 0.12);
 
-    gain.gain.setValueAtTime(0.4 * powerRatio, t);
+    gain.gain.setValueAtTime(0.45 * powerRatio, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
 
     osc.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(sfxGain);
 
     osc.start(t);
     osc.stop(t + 0.18);
@@ -217,7 +342,7 @@ const AudioManager = (() => {
     triggerHaptic([35, 15, 45]);
   }
 
-  // 7. 멀티볼 파워업 사운드 (우주적인 상승 팡파레)
+  // 6. 멀티볼 파워업 사운드 (우주적인 상승 팡파레)
   function playMultiball() {
     if (isMuted || !ctx) return;
     initAudio();
@@ -232,11 +357,11 @@ const AudioManager = (() => {
       osc.frequency.setValueAtTime(freq, t);
       osc.frequency.exponentialRampToValueAtTime(freq * 1.5, t + 0.2);
 
-      gain.gain.setValueAtTime(0.35, t);
+      gain.gain.setValueAtTime(0.4, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + 0.25);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(sfxGain);
 
       osc.start(t);
       osc.stop(t + 0.26);
@@ -245,7 +370,7 @@ const AudioManager = (() => {
     triggerHaptic([50, 30, 50, 30, 80]);
   }
 
-  // 8. 잭팟 / 대규모 보너스 팡파레 ("빠바밤- 빰!")
+  // 7. 잭팟 / 대규모 보너스 팡파레 ("빠바밤- 빰!")
   function playJackpot() {
     if (isMuted || !ctx) return;
     initAudio();
@@ -254,7 +379,7 @@ const AudioManager = (() => {
       { f: 523.25, d: 0.1 },
       { f: 659.25, d: 0.1 },
       { f: 783.99, d: 0.1 },
-      { f: 1046.50, d: 0.25 }
+      { f: 1046.50, d: 0.28 }
     ];
 
     let offset = 0;
@@ -266,11 +391,11 @@ const AudioManager = (() => {
       osc.type = "sine";
       osc.frequency.setValueAtTime(m.f, t);
 
-      gain.gain.setValueAtTime(0.4, t);
+      gain.gain.setValueAtTime(0.45, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + m.d);
 
       osc.connect(gain);
-      gain.connect(masterGain);
+      gain.connect(sfxGain);
 
       osc.start(t);
       osc.stop(t + m.d + 0.02);
@@ -280,45 +405,7 @@ const AudioManager = (() => {
     triggerHaptic([40, 20, 40, 20, 100]);
   }
 
-  // 9. 스킬 발동 사운드
-  function playSkill(skillType) {
-    if (isMuted || !ctx) return;
-    initAudio();
-
-    const t = ctx.currentTime;
-    const osc = ctx.createOscillator();
-    const gain = ctx.createGain();
-
-    if (skillType === "SLOW") {
-      // 타임 슬로우: 저음으로 피치 드롭
-      osc.type = "sine";
-      osc.frequency.setValueAtTime(800, t);
-      osc.frequency.exponentialRampToValueAtTime(120, t + 0.35);
-    } else if (skillType === "SHIELD") {
-      // 실드 배리어: 전자 에너지 상승음
-      osc.type = "sawtooth";
-      osc.frequency.setValueAtTime(250, t);
-      osc.frequency.exponentialRampToValueAtTime(950, t + 0.25);
-    } else {
-      // 기본 파워업
-      osc.type = "triangle";
-      osc.frequency.setValueAtTime(440, t);
-      osc.frequency.exponentialRampToValueAtTime(880, t + 0.2);
-    }
-
-    gain.gain.setValueAtTime(0.4, t);
-    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
-
-    osc.connect(gain);
-    gain.connect(masterGain);
-
-    osc.start(t);
-    osc.stop(t + 0.35);
-
-    triggerHaptic([40, 30, 40]);
-  }
-
-  // 10. 볼 아웃 (추락/드레인 사운드: 아쉬운 다운톤)
+  // 8. 볼 아웃 (드레인 사운드)
   function playDrain() {
     if (isMuted || !ctx) return;
     initAudio();
@@ -331,11 +418,11 @@ const AudioManager = (() => {
     osc.frequency.setValueAtTime(320, t);
     osc.frequency.exponentialRampToValueAtTime(80, t + 0.45);
 
-    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.setValueAtTime(0.45, t);
     gain.gain.exponentialRampToValueAtTime(0.001, t + 0.5);
 
     osc.connect(gain);
-    gain.connect(masterGain);
+    gain.connect(sfxGain);
 
     osc.start(t);
     osc.stop(t + 0.52);
@@ -343,11 +430,51 @@ const AudioManager = (() => {
     triggerHaptic([80, 50, 100]);
   }
 
+  // 9. 스킬 발동 사운드
+  function playSkill(skillType) {
+    if (isMuted || !ctx) return;
+    initAudio();
+
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    if (skillType === "SLOW") {
+      osc.type = "sine";
+      osc.frequency.setValueAtTime(800, t);
+      osc.frequency.exponentialRampToValueAtTime(120, t + 0.35);
+    } else if (skillType === "SHIELD") {
+      osc.type = "sawtooth";
+      osc.frequency.setValueAtTime(250, t);
+      osc.frequency.exponentialRampToValueAtTime(950, t + 0.25);
+    } else {
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(440, t);
+      osc.frequency.exponentialRampToValueAtTime(880, t + 0.2);
+    }
+
+    gain.gain.setValueAtTime(0.4, t);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+
+    osc.connect(gain);
+    gain.connect(sfxGain);
+
+    osc.start(t);
+    osc.stop(t + 0.35);
+
+    triggerHaptic([40, 30, 40]);
+  }
+
   // 볼륨 및 음소거 토글
   function toggleMute() {
     isMuted = !isMuted;
     if (masterGain && ctx) {
-      masterGain.gain.setValueAtTime(isMuted ? 0 : 0.7, ctx.currentTime);
+      masterGain.gain.setValueAtTime(isMuted ? 0 : 0.8, ctx.currentTime);
+    }
+    if (isMuted) {
+      stopVegasBGM();
+    } else {
+      startVegasBGM();
     }
     return isMuted;
   }
@@ -358,11 +485,12 @@ const AudioManager = (() => {
 
   return {
     initAudio,
+    startVegasBGM,
+    stopVegasBGM,
     playFlipper,
     playBumper,
     playSlingshot,
     playRollover,
-    playSpinner,
     playPlungerLaunch,
     playMultiball,
     playJackpot,

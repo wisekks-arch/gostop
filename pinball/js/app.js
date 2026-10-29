@@ -424,3 +424,4 @@ document.addEventListener("DOMContentLoaded", () => {
   showModal(modalLobby);
   requestAnimationFrame(gameLoop);
 });
+

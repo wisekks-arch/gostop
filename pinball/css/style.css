@@ -42,7 +42,7 @@ body {
   align-items: center;
 }
 
-/* 스마트폰 전용 세로형 아케이드 프레임 */
+/* 스마트폰 전용 세로형 아케이드 프레임 (라스베가스 카지노 골드 & 크롬 몰딩) */
 .game-container {
   position: relative;
   width: 100%;
@@ -52,26 +52,28 @@ body {
   background: var(--bg-primary);
   display: flex;
   flex-direction: column;
-  box-shadow: 0 0 40px rgba(0, 240, 255, 0.15);
+  box-shadow: 0 0 50px rgba(255, 119, 0, 0.25), inset 0 0 20px rgba(0, 0, 0, 0.8);
   overflow: hidden;
-  border-left: 1px solid var(--border-color);
-  border-right: 1px solid var(--border-color);
+  border-left: 3px solid #f59e0b;
+  border-right: 3px solid #f59e0b;
+  border-top: 2px solid #ff0055;
 }
 
-/* 상단 HUD (스코어, 콤보, 라이프, 사운드) */
+/* 상단 HUD (라스베가스 레트로 전광판 스타일) */
 .hud-header {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
-  height: 56px;
-  background: linear-gradient(to bottom, rgba(6, 7, 19, 0.95), rgba(6, 7, 19, 0));
+  height: 64px;
+  background: linear-gradient(to bottom, rgba(10, 6, 4, 0.98), rgba(10, 6, 4, 0.85), transparent);
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.85rem;
   z-index: 10;
   pointer-events: none;
+  border-bottom: 1px solid rgba(245, 158, 11, 0.3);
 }
 
 .hud-header > * {
@@ -383,3 +385,4 @@ body {
   border-color: var(--accent-cyan);
   box-shadow: var(--glow-cyan);
 }
+

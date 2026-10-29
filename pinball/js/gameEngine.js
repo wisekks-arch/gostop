@@ -520,3 +520,4 @@ const GameEngine = (() => {
 if (typeof window !== "undefined") {
   window.GameEngine = GameEngine;
 }
+

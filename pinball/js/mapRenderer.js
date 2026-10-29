@@ -1,7 +1,7 @@
 /**
- * Pinball Rush (핀볼 러시) - 캔버스 고해상도 네온 렌더러 (mapRenderer.js)
- * 모바일 레티나 DPR 최적화, 네온 글로우, 충돌 파티클 스파크,
- * 플리퍼/범퍼/특수 오브젝트 및 플로팅 스코어 텍스트 시각화
+ * Pinball Rush (핀볼 러시) - 라스베가스 전통 핀볼 캔버스 렌더러 (mapRenderer.js)
+ * 첨부 사진 기반: 상단 도트 전구 화면(DMD), 화려한 체이서 전구 불빛,
+ * 플래시 램프, 바닥 화살표 인서트 조명, 3구 팝범퍼 및 크롬 와이어 램프 렌더링
  */
 
 const MapRenderer = (() => {
@@ -13,7 +13,12 @@ const MapRenderer = (() => {
   const particles = [];
   const floatingTexts = [];
 
-  // 가상 게임 보드 표준 해상도 (9:16 모바일 최적화)
+  // 전구 애니메이션 타이머
+  let chaserStep = 0;
+  let flashIntensity = 0; // 범퍼 타격 시 순간 플래시 밝기 (0 ~ 1)
+  let dmdScrollX = 0;
+
+  // 가상 해상도 (9:16)
   const V_WIDTH = 380;
   const V_HEIGHT = 680;
 
@@ -33,32 +38,33 @@ const MapRenderer = (() => {
   }
 
   // 충돌 파티클 스파크 방출
-  function emitSparks(x, y, color = "#00f0ff", count = 12) {
+  function emitSparks(x, y, color = "#ffeb3b", count = 14) {
+    flashIntensity = 1.0; // 충돌 시 전구 플래시 트리거
     for (let i = 0; i < count; i++) {
       const angle = Math.random() * Math.PI * 2;
-      const speed = 1.5 + Math.random() * 4.5;
+      const speed = 1.8 + Math.random() * 5.0;
       particles.push({
         x, y,
         vx: Math.cos(angle) * speed,
         vy: Math.sin(angle) * speed,
-        radius: 1.5 + Math.random() * 2.5,
+        radius: 1.5 + Math.random() * 2.8,
         color,
         life: 1.0,
-        decay: 0.035 + Math.random() * 0.025
+        decay: 0.035 + Math.random() * 0.03
       });
     }
   }
 
-  // 부동 점수 텍스트 팝업 ("+500", "JACKPOT!", "COMBO x3")
+  // 부동 점수 텍스트
   function addFloatingText(x, y, text, color = "#ffffff", size = 16) {
     floatingTexts.push({
       x, y,
       text,
       color,
       size,
-      vy: -1.4,
+      vy: -1.3,
       life: 1.0,
-      decay: 0.025
+      decay: 0.024
     });
   }
 
@@ -74,36 +80,38 @@ const MapRenderer = (() => {
     ctx.save();
     ctx.scale(scaleX, scaleY);
 
-    // 1. 테마 배경 렌더링
+    chaserStep += 0.22; // 전구 회전 속도
+    if (flashIntensity > 0) flashIntensity = Math.max(0, flashIntensity - 0.06);
+
     const theme = gameState.theme;
-    const grad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
-    grad.addColorStop(0, theme.bgGradient[0]);
-    grad.addColorStop(0.5, theme.bgGradient[1]);
-    grad.addColorStop(1, theme.bgGradient[2]);
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
 
-    // 은은한 배경 사이버 그리드 패턴
-    renderGrid(theme);
+    // 1. 라스베가스 캐비닛 원근감 배경 렌더링
+    renderCabinetBackground(theme);
 
-    // 2. 외곽 벽면 및 가이드 레일 렌더링
+    // 2. 바닥 화살표 인서트 조명 (Insert Arrows)
+    renderInsertArrows(theme);
+
+    // 3. 외곽 크롬 레일 및 벽면
     renderWalls(gameState, theme);
 
-    // 3. 테마 특수 오브젝트 렌더링 (블랙홀, 워프게이트, 보스, 보물상자 등)
-    renderThemeSpecialObjects(gameState, theme);
+    // 4. 크롬 와이어 램프 레일 (첨부 사진 스타일)
+    renderWireRamps(theme);
 
-    // 4. 범퍼 및 슬링샷 렌더링
+    // 5. 화려한 체이서 전구 불빛 (Las Vegas Running Chaser Bulbs)
+    renderChaserBulbs(theme);
+
+    // 6. 3구 팝 범퍼 & 슬링샷 렌더링
     renderBumpers(gameState, theme);
     renderSlingshots(gameState, theme);
     renderRollovers(gameState, theme);
 
-    // 5. 하단 세이프 실드 (스킬 발동 시)
+    // 7. 하단 세이프 실드 (스킬 발동 시)
     if (gameState.shieldActive) {
       ctx.save();
       ctx.strokeStyle = "#00f0ff";
       ctx.lineWidth = 6;
       ctx.shadowColor = "#00f0ff";
-      ctx.shadowBlur = 15;
+      ctx.shadowBlur = 16;
       ctx.beginPath();
       ctx.moveTo(140, 630);
       ctx.lineTo(240, 630);
@@ -111,90 +119,246 @@ const MapRenderer = (() => {
       ctx.restore();
     }
 
-    // 6. 플리퍼 렌더링
-    renderFlipper(gameState.leftFlipper, theme.accentColor);
-    renderFlipper(gameState.rightFlipper, theme.secondaryColor);
+    // 8. 플리퍼 렌더링
+    renderFlipper(gameState.leftFlipper, "#ffffff", "#ff0055");
+    renderFlipper(gameState.rightFlipper, "#ffffff", "#00f0ff");
 
-    // 7. 플런저 (발사 스프링)
+    // 9. 플런저 (발사 스프링)
     renderPlunger(gameState.plunger);
 
-    // 8. 핀볼 공들 렌더링 (멀티볼 포함)
+    // 10. 공들 렌더링 (크롬 광택 구체)
     gameState.balls.forEach(b => {
       if (b.active) renderBall(b, theme);
     });
 
-    // 9. 파티클 스파크 업데이트 및 렌더링
+    // 11. 파티클 스파크 및 플로팅 텍스트
     renderParticles();
-
-    // 10. 플로팅 스코어 텍스트
     renderFloatingTexts();
 
+    // 12. 상단 도트 매트릭스 전구 스크린 (DMD 디스플레이)
+    renderDMDDisplay(gameState);
+
     ctx.restore();
   }
 
-  // 배경 네온 그리드
-  function renderGrid(theme) {
+  // 1. 캐비닛 배경 (원근감 딥 카지노 우드 & 메탈 프레임)
+  function renderCabinetBackground(theme) {
+    // 딥 그라디언트 테이블 매트
+    const grad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
+    grad.addColorStop(0, theme.bgGradient[0]);
+    grad.addColorStop(0.5, theme.bgGradient[1]);
+    grad.addColorStop(1, theme.bgGradient[2]);
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+
+    // 플래시 효과 발동 시 은은한 전체 발광
+    if (flashIntensity > 0) {
+      ctx.fillStyle = `rgba(255, 235, 59, ${flashIntensity * 0.12})`;
+      ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
+    }
+
+    // 캐비닛 양쪽 사이드 크롬 몰딩 (첨부 사진의 은색 메탈 몰딩)
+    ctx.fillStyle = "linear-gradient(to right, #444, #bbb, #333)";
+    ctx.fillStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.fillRect(0, 0, 18, V_HEIGHT);
+    ctx.fillRect(V_WIDTH - 18, 0, 18, V_HEIGHT);
+  }
+
+  // 2. 바닥 화살표 인서트 조명 (Insert Arrows)
+  function renderInsertArrows(theme) {
+    const arrows = theme.insertArrows || [];
+    const stepIdx = Math.floor(chaserStep * 2) % 6;
+
+    arrows.forEach((arr, idx) => {
+      const isLit = (idx === stepIdx) || (flashIntensity > 0.3);
+      ctx.save();
+      ctx.translate(arr.x, arr.y);
+
+      const col = isLit ? arr.color : "rgba(255, 255, 255, 0.12)";
+      ctx.fillStyle = col;
+      ctx.strokeStyle = isLit ? "#ffffff" : "rgba(255,255,255,0.2)";
+      ctx.lineWidth = 1.5;
+
+      if (isLit) {
+        ctx.shadowColor = arr.color;
+        ctx.shadowBlur = 14;
+      }
+
+      // 화살표 형태
+      ctx.beginPath();
+      ctx.moveTo(0, -14);
+      ctx.lineTo(10, 8);
+      ctx.lineTo(4, 8);
+      ctx.lineTo(4, 16);
+      ctx.lineTo(-4, 16);
+      ctx.lineTo(-4, 8);
+      ctx.lineTo(-10, 8);
+      ctx.closePath();
+      ctx.fill();
+      ctx.stroke();
+
+      // 화살표 텍스트 라벨
+      ctx.fillStyle = isLit ? "#ffffff" : "rgba(255,255,255,0.4)";
+      ctx.font = "800 8px sans-serif";
+      ctx.textAlign = "center";
+      ctx.shadowBlur = 0;
+      ctx.fillText(arr.label, 0, 26);
+
+      ctx.restore();
+    });
+  }
+
+  // 3. 화려한 체이서 전구 불빛 (Running Chaser Bulbs)
+  function renderChaserBulbs(theme) {
+    const bulbs = theme.chaserBulbs || [];
+    const activeIndex = Math.floor(chaserStep) % bulbs.length;
+
+    bulbs.forEach((bulb, idx) => {
+      // 순차적으로 밝아지는 시퀀스 및 플래시 연동
+      const distFromHead = Math.abs(idx - activeIndex);
+      const isLit = (distFromHead <= 2) || (distFromHead >= bulbs.length - 2) || (flashIntensity > 0.2);
+
+      ctx.save();
+      const bulbColor = bulb.color;
+
+      // 전구 베이스 소켓
+      ctx.fillStyle = "#222222";
+      ctx.beginPath();
+      ctx.arc(bulb.x, bulb.y, bulb.radius + 1.2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // 전구 본체 및 발광
+      if (isLit) {
+        ctx.shadowColor = bulbColor;
+        ctx.shadowBlur = 15 + flashIntensity * 12;
+        ctx.fillStyle = "#ffffff";
+      } else {
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = "rgba(255, 255, 255, 0.25)";
+      }
+
+      ctx.beginPath();
+      ctx.arc(bulb.x, bulb.y, bulb.radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      if (isLit) {
+        ctx.strokeStyle = bulbColor;
+        ctx.lineWidth = 1.5;
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    });
+  }
+
+  // 4. 크롬 와이어 램프 (Wire Ramps)
+  function renderWireRamps(theme) {
+    const ramps = theme.wireRamps || [];
+    ramps.forEach(r => {
+      ctx.save();
+      ctx.strokeStyle = "rgba(220, 230, 245, 0.45)";
+      ctx.lineWidth = 3;
+      ctx.shadowColor = "rgba(255, 255, 255, 0.3)";
+      ctx.shadowBlur = 4;
+
+      // 트윈 와이어 레일 2가닥
+      [-2.5, 2.5].forEach(offset => {
+        ctx.beginPath();
+        ctx.moveTo(r.startX + offset, r.startY);
+        ctx.bezierCurveTo(r.cp1X + offset, r.cp1Y, r.cp2X + offset, r.cp2Y, r.endX + offset, r.endY);
+        ctx.stroke();
+      });
+
+      ctx.restore();
+    });
+  }
+
+  // 5. 상단 도트 매트릭스 전구 스크린 (DMD: Dot Matrix Display)
+  function renderDMDDisplay(gameState) {
     ctx.save();
-    ctx.strokeStyle = "rgba(255, 255, 255, 0.035)";
-    ctx.lineWidth = 1;
-    const step = 30;
-    for (let x = 0; x <= V_WIDTH; x += step) {
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, V_HEIGHT);
-      ctx.stroke();
-    }
-    for (let y = 0; y <= V_HEIGHT; y += step) {
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(V_WIDTH, y);
-      ctx.stroke();
-    }
+
+    // DMD 전광판 케이스 프레임 (상단 중앙)
+    const dmdX = 55;
+    const dmdY = 16;
+    const dmdW = 270;
+    const dmdH = 46;
+
+    ctx.fillStyle = "#0a0604";
+    ctx.strokeStyle = "#443022";
+    ctx.lineWidth = 3;
+    ctx.strokeRect(dmdX, dmdY, dmdW, dmdH);
+    ctx.fillRect(dmdX, dmdY, dmdW, dmdH);
+
+    // 내부 전구 도트 그리드 배경
+    ctx.fillStyle = "rgba(35, 18, 5, 0.7)";
+    ctx.fillRect(dmdX + 2, dmdY + 2, dmdW - 4, dmdH - 4);
+
+    // 오렌지빛 도트 전구 LED 텍스트 연출
+    ctx.shadowColor = "#ff7700";
+    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#ffaa00";
+    ctx.font = "900 15px monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+
+    const scoreStr = gameState.score.toLocaleString();
+    const comboText = gameState.combo > 1 ? ` · COMBO x${gameState.combo}` : "";
+    const displayText = `★ ${scoreStr} PTS${comboText} ★`;
+
+    ctx.fillText(displayText, dmdX + dmdW / 2, dmdY + 18);
+
+    // 하단 보조 텍스트 ("AUTO FIRE", "JACKPOT READY", "BONUS x2")
+    ctx.fillStyle = "#ff5500";
+    ctx.font = "800 10px monospace";
+    ctx.shadowBlur = 6;
+    const subText = gameState.shieldActive ? "▶ SHIELD ACTIVE ◀" : (gameState.combo > 2 ? "⚡ SUPER COMBO ACTIVE ⚡" : "★ PINBALL RUSH LAS VEGAS ★");
+    ctx.fillText(subText, dmdX + dmdW / 2, dmdY + 34);
+
     ctx.restore();
   }
 
-  // 벽면 & 곡선 가이드 레일
+  // 외곽 벽면 & 레일
   function renderWalls(gameState, theme) {
     ctx.save();
     ctx.strokeStyle = theme.wallColor;
     ctx.lineWidth = 4;
     ctx.shadowColor = theme.wallColor;
-    ctx.shadowBlur = 8;
+    ctx.shadowBlur = 10 + flashIntensity * 8;
     ctx.lineCap = "round";
 
-    // 좌측 상단 곡면 벽
+    // 상단 아치 곡면
     ctx.beginPath();
-    ctx.moveTo(35, 120);
-    ctx.quadraticCurveTo(35, 20, 190, 20);
-    ctx.quadraticCurveTo(345, 20, 345, 120);
+    ctx.moveTo(35, 140);
+    ctx.quadraticCurveTo(35, 65, 190, 65);
+    ctx.quadraticCurveTo(345, 65, 345, 140);
     ctx.stroke();
 
-    // 우측 발사 레인 분리벽 (Plunger Lane)
+    // 우측 발사 레인 분리벽
     ctx.beginPath();
-    ctx.moveTo(345, 120);
+    ctx.moveTo(345, 140);
     ctx.lineTo(345, 600);
     ctx.stroke();
 
     ctx.beginPath();
-    ctx.moveTo(375, 120);
+    ctx.moveTo(375, 140);
     ctx.lineTo(375, 660);
     ctx.stroke();
 
     // 좌측 외곽벽
     ctx.beginPath();
-    ctx.moveTo(35, 120);
+    ctx.moveTo(35, 140);
     ctx.lineTo(35, 450);
     ctx.lineTo(100, 530);
     ctx.stroke();
 
-    // 우측 외곽벽 (발사대 안쪽)
+    // 우측 외곽벽
     ctx.beginPath();
-    ctx.moveTo(315, 150);
+    ctx.moveTo(315, 160);
     ctx.lineTo(315, 450);
     ctx.lineTo(280, 530);
     ctx.stroke();
 
-    // 하단 드레인 가이드 경사벽
+    // 하단 드레인 경사벽
     ctx.beginPath();
     ctx.moveTo(100, 530);
     ctx.lineTo(135, 570);
@@ -208,83 +372,54 @@ const MapRenderer = (() => {
     ctx.restore();
   }
 
-  // 플리퍼 렌더링
-  function renderFlipper(flipper, color) {
-    if (!flipper) return;
-    ctx.save();
-    ctx.translate(flipper.pivotX, flipper.pivotY);
-    ctx.rotate(flipper.angle);
-
-    // 플리퍼 몸체 (네온 라운드 사다리꼴)
-    ctx.shadowColor = color;
-    ctx.shadowBlur = 12;
-    ctx.fillStyle = color;
-
-    ctx.beginPath();
-    ctx.arc(0, 0, flipper.radius, Math.PI * 0.5, Math.PI * 1.5);
-    ctx.lineTo(flipper.length, -flipper.radius * 0.6);
-    ctx.arc(flipper.length, 0, flipper.radius * 0.6, -Math.PI * 0.5, Math.PI * 0.5);
-    ctx.lineTo(0, flipper.radius);
-    ctx.closePath();
-    ctx.fill();
-
-    // 힌지 축 볼트 캡
-    ctx.fillStyle = "#ffffff";
-    ctx.shadowBlur = 4;
-    ctx.beginPath();
-    ctx.arc(0, 0, flipper.radius * 0.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-  }
-
-  // 범퍼 렌더링
+  // 3구 클래식 팝 범퍼 (Pop Bumpers) 렌더링
   function renderBumpers(gameState, theme) {
-    const bumpers = gameState.theme.bumpers || [];
+    const bumpers = theme.bumpers || [];
     bumpers.forEach(b => {
       ctx.save();
       ctx.shadowColor = b.color;
-      ctx.shadowBlur = 16;
+      ctx.shadowBlur = 18 + flashIntensity * 15;
 
-      // 외곽 링
-      ctx.strokeStyle = b.color;
+      // 외곽 크롬 링
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 3.5;
       ctx.beginPath();
       ctx.arc(b.x, b.y, b.radius, 0, Math.PI * 2);
       ctx.stroke();
 
-      // 내부 코어 그라디언트
+      // 내부 전구 조명 코어 그라디언트
       const grad = ctx.createRadialGradient(b.x, b.y, 2, b.x, b.y, b.radius);
       grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.4, b.color);
-      grad.addColorStop(1, "rgba(0,0,0,0.6)");
+      grad.addColorStop(0.35, b.color);
+      grad.addColorStop(0.85, "rgba(0,0,0,0.7)");
+      grad.addColorStop(1, b.color);
       ctx.fillStyle = grad;
       ctx.beginPath();
-      ctx.arc(b.x, b.y, b.radius * 0.78, 0, Math.PI * 2);
+      ctx.arc(b.x, b.y, b.radius * 0.85, 0, Math.PI * 2);
       ctx.fill();
 
-      // 점수 표기 텍스트
+      // 점수 라벨
       ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 9px sans-serif";
+      ctx.font = "900 10px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
-      ctx.shadowBlur = 0;
-      ctx.fillText(b.points, b.x, b.y);
+      ctx.shadowBlur = 2;
+      ctx.fillText(b.label || b.points, b.x, b.y);
 
       ctx.restore();
     });
   }
 
-  // 슬링샷 삼각형 렌더링
+  // 슬링샷
   function renderSlingshots(gameState, theme) {
     const slings = gameState.slingshots || [];
     slings.forEach(s => {
       ctx.save();
-      ctx.strokeStyle = theme.accentColor;
+      ctx.strokeStyle = "#ffffff";
       ctx.lineWidth = 3;
       ctx.shadowColor = theme.accentColor;
-      ctx.shadowBlur = 10;
-      ctx.fillStyle = "rgba(0, 240, 255, 0.12)";
+      ctx.shadowBlur = 12 + flashIntensity * 10;
+      ctx.fillStyle = "rgba(255, 0, 119, 0.18)";
 
       ctx.beginPath();
       ctx.moveTo(s.p1.x, s.p1.y);
@@ -294,24 +429,32 @@ const MapRenderer = (() => {
       ctx.fill();
       ctx.stroke();
 
+      // 고무 밴드 앵커 핀
+      ctx.fillStyle = "#ffeb3b";
+      [s.p1, s.p2, s.p3].forEach(p => {
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, 3, 0, Math.PI * 2);
+        ctx.fill();
+      });
+
       ctx.restore();
     });
   }
 
-  // 롤오버 레인
+  // 롤오버
   function renderRollovers(gameState, theme) {
-    const rollovers = gameState.theme.rollovers || [];
+    const rollovers = theme.rollovers || [];
     rollovers.forEach(r => {
       ctx.save();
-      const col = r.active ? "#ffeb3b" : "rgba(255,255,255,0.3)";
+      const col = r.active ? "#ffeb3b" : "rgba(255,255,255,0.35)";
       ctx.strokeStyle = col;
       ctx.shadowColor = col;
-      ctx.shadowBlur = r.active ? 12 : 2;
-      ctx.lineWidth = 2;
+      ctx.shadowBlur = r.active ? 15 : 2;
+      ctx.lineWidth = 2.2;
 
       ctx.strokeRect(r.x - r.width / 2, r.y - r.height / 2, r.width, r.height);
       ctx.fillStyle = col;
-      ctx.font = "bold 10px sans-serif";
+      ctx.font = "900 11px sans-serif";
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
       ctx.fillText(r.label || "★", r.x, r.y);
@@ -320,26 +463,52 @@ const MapRenderer = (() => {
     });
   }
 
-  // 플런저 스프링
+  // 플리퍼
+  function renderFlipper(flipper, bodyColor, tipColor) {
+    if (!flipper) return;
+    ctx.save();
+    ctx.translate(flipper.pivotX, flipper.pivotY);
+    ctx.rotate(flipper.angle);
+
+    ctx.shadowColor = tipColor;
+    ctx.shadowBlur = 12;
+
+    // 플리퍼 화이트 바디 + 팁 포인트
+    ctx.fillStyle = bodyColor;
+    ctx.beginPath();
+    ctx.arc(0, 0, flipper.radius, Math.PI * 0.5, Math.PI * 1.5);
+    ctx.lineTo(flipper.length, -flipper.radius * 0.55);
+    ctx.arc(flipper.length, 0, flipper.radius * 0.55, -Math.PI * 0.5, Math.PI * 0.5);
+    ctx.lineTo(0, flipper.radius);
+    ctx.closePath();
+    ctx.fill();
+
+    // 팁 고무 캡
+    ctx.fillStyle = tipColor;
+    ctx.beginPath();
+    ctx.arc(flipper.length, 0, flipper.radius * 0.55, -Math.PI * 0.5, Math.PI * 0.5);
+    ctx.fill();
+
+    // 힌지 축 볼트
+    ctx.fillStyle = "#333333";
+    ctx.beginPath();
+    ctx.arc(0, 0, flipper.radius * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+
+  // 플런저
   function renderPlunger(plunger) {
     if (!plunger) return;
     ctx.save();
     const px = 360;
     const py = 640;
-    const pullDist = plunger.pullRatio * 38; // 0 ~ 38px 압축
+    const pullDist = plunger.pullRatio * 38;
 
-    // 스프링 지지대
-    ctx.strokeStyle = "#888888";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(px - 10, py);
-    ctx.lineTo(px + 10, py);
-    ctx.stroke();
-
-    // 코일 스프링
-    ctx.strokeStyle = "#00f0ff";
-    ctx.shadowColor = "#00f0ff";
-    ctx.shadowBlur = 6;
+    ctx.strokeStyle = "#ff7700";
+    ctx.shadowColor = "#ff7700";
+    ctx.shadowBlur = 8;
     ctx.lineWidth = 3;
 
     ctx.beginPath();
@@ -354,58 +523,42 @@ const MapRenderer = (() => {
     }
     ctx.stroke();
 
-    // 팁 손잡이
-    ctx.fillStyle = "#ff0077";
-    ctx.shadowColor = "#ff0077";
-    ctx.shadowBlur = 10;
+    ctx.fillStyle = "#ff0055";
+    ctx.shadowColor = "#ff0055";
+    ctx.shadowBlur = 12;
     ctx.beginPath();
-    ctx.arc(px, py - 8 + pullDist, 7, 0, Math.PI * 2);
+    ctx.arc(px, py - 8 + pullDist, 7.5, 0, Math.PI * 2);
     ctx.fill();
 
     ctx.restore();
   }
 
-  // 핀볼 공 렌더링
+  // 크롬 볼 렌더링
   function renderBall(ball, theme) {
     ctx.save();
 
-    // 1. 잔상 궤적 (Motion Blur Trail)
+    // 궤적
     if (ball.trail && ball.trail.length > 0) {
       for (let i = 0; i < ball.trail.length; i++) {
         const tr = ball.trail[i];
-        ctx.fillStyle = ball.type === "GOLD" ? `rgba(255, 215, 0, ${tr.alpha * 0.4})` : `rgba(0, 240, 255, ${tr.alpha * 0.4})`;
+        ctx.fillStyle = `rgba(255, 235, 59, ${tr.alpha * 0.45})`;
         ctx.beginPath();
         ctx.arc(tr.x, tr.y, ball.radius * (0.5 + 0.5 * (i / ball.trail.length)), 0, Math.PI * 2);
         ctx.fill();
       }
     }
 
-    // 2. 공 본체 (금속 광택 구체 그라디언트)
-    ctx.shadowColor = ball.type === "GOLD" ? "#ffd700" : (ball.type === "BOMB" ? "#ff0055" : "#00f0ff");
-    ctx.shadowBlur = 10;
+    ctx.shadowColor = "#ffffff";
+    ctx.shadowBlur = 12;
 
     const grad = ctx.createRadialGradient(
       ball.x - ball.radius * 0.35, ball.y - ball.radius * 0.35, 1,
       ball.x, ball.y, ball.radius
     );
-
-    if (ball.type === "GOLD") {
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.3, "#fff3a8");
-      grad.addColorStop(0.8, "#f59e0b");
-      grad.addColorStop(1, "#b45309");
-    } else if (ball.type === "BOMB") {
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.3, "#f43f5e");
-      grad.addColorStop(0.8, "#be123c");
-      grad.addColorStop(1, "#4c0519");
-    } else {
-      // 일반 크롬 볼
-      grad.addColorStop(0, "#ffffff");
-      grad.addColorStop(0.2, "#e2e8f0");
-      grad.addColorStop(0.7, "#94a3b8");
-      grad.addColorStop(1, "#334155");
-    }
+    grad.addColorStop(0, "#ffffff");
+    grad.addColorStop(0.2, "#f1f5f9");
+    grad.addColorStop(0.7, "#94a3b8");
+    grad.addColorStop(1, "#1e293b");
 
     ctx.fillStyle = grad;
     ctx.beginPath();
@@ -415,95 +568,7 @@ const MapRenderer = (() => {
     ctx.restore();
   }
 
-  // 테마 특수 오브젝트 (블랙홀, 보스, 보물상자 등)
-  function renderThemeSpecialObjects(gameState, theme) {
-    // 1. 우주 블랙홀
-    if (theme.blackhole && theme.blackhole.active) {
-      const bh = theme.blackhole;
-      ctx.save();
-      ctx.translate(bh.x, bh.y);
-      bh.spinTimer = (bh.spinTimer || 0) + 0.04;
-      ctx.rotate(bh.spinTimer);
-
-      // 나선 소용돌이
-      ctx.strokeStyle = "rgba(168, 85, 247, 0.45)";
-      ctx.lineWidth = 2.5;
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.arc(0, 0, bh.radius * (0.4 + i * 0.22), i, i + Math.PI * 1.2);
-        ctx.stroke();
-      }
-
-      // 블랙홀 코어
-      ctx.fillStyle = "#000000";
-      ctx.shadowColor = "#a855f7";
-      ctx.shadowBlur = 18;
-      ctx.beginPath();
-      ctx.arc(0, 0, bh.radius * 0.5, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.restore();
-    }
-
-    // 2. 사이버시티 / 판타지 보스
-    if (theme.hasBoss && theme.boss && !theme.boss.defeated) {
-      const boss = theme.boss;
-      ctx.save();
-      ctx.shadowColor = theme.secondaryColor;
-      ctx.shadowBlur = 20;
-
-      // 보스 코어 본체
-      ctx.fillStyle = theme.secondaryColor;
-      ctx.beginPath();
-      ctx.arc(boss.x, boss.y, boss.radius, 0, Math.PI * 2);
-      ctx.fill();
-
-      // 보스 심볼
-      ctx.fillStyle = "#ffffff";
-      ctx.font = "bold 18px sans-serif";
-      ctx.textAlign = "center";
-      ctx.textBaseline = "middle";
-      ctx.shadowBlur = 0;
-      ctx.fillText(theme.id === "FANTASY" ? "🐲" : "🤖", boss.x, boss.y - 2);
-
-      // 보스 HP 바
-      const barW = 80;
-      const barH = 7;
-      const hpRatio = Math.max(0, boss.hp / boss.maxHp);
-      ctx.fillStyle = "rgba(0, 0, 0, 0.7)";
-      ctx.fillRect(boss.x - barW / 2, boss.y + boss.radius + 6, barW, barH);
-      ctx.fillStyle = "#ef4444";
-      ctx.fillRect(boss.x - barW / 2, boss.y + boss.radius + 6, barW * hpRatio, barH);
-      ctx.strokeStyle = "#ffffff";
-      ctx.lineWidth = 1;
-      ctx.strokeRect(boss.x - barW / 2, boss.y + boss.radius + 6, barW, barH);
-
-      ctx.restore();
-    }
-
-    // 3. 해적 보물상자
-    if (theme.chests) {
-      theme.chests.forEach(c => {
-        ctx.save();
-        ctx.fillStyle = c.opened ? "#10b981" : "#f59e0b";
-        ctx.strokeStyle = "#ffffff";
-        ctx.shadowColor = c.opened ? "#10b981" : "#f59e0b";
-        ctx.shadowBlur = 10;
-        ctx.lineWidth = 2;
-        ctx.fillRect(c.x - c.width / 2, c.y - c.height / 2, c.width, c.height);
-        ctx.strokeRect(c.x - c.width / 2, c.y - c.height / 2, c.width, c.height);
-
-        ctx.fillStyle = "#000000";
-        ctx.font = "bold 12px sans-serif";
-        ctx.textAlign = "center";
-        ctx.textBaseline = "middle";
-        ctx.fillText(c.opened ? "★" : "📦", c.x, c.y);
-        ctx.restore();
-      });
-    }
-  }
-
-  // 파티클 업데이트 & 렌더링
+  // 파티클
   function renderParticles() {
     for (let i = particles.length - 1; i >= 0; i--) {
       const p = particles[i];
@@ -520,7 +585,7 @@ const MapRenderer = (() => {
       ctx.fillStyle = p.color;
       ctx.globalAlpha = Math.max(0, p.life);
       ctx.shadowColor = p.color;
-      ctx.shadowBlur = 6;
+      ctx.shadowBlur = 8;
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.radius * p.life, 0, Math.PI * 2);
       ctx.fill();
@@ -528,7 +593,7 @@ const MapRenderer = (() => {
     }
   }
 
-  // 플로팅 스코어 텍스트 업데이트 & 렌더링
+  // 플로팅 텍스트
   function renderFloatingTexts() {
     for (let i = floatingTexts.length - 1; i >= 0; i--) {
       const ft = floatingTexts[i];
@@ -541,12 +606,12 @@ const MapRenderer = (() => {
       }
 
       ctx.save();
-      ctx.font = `800 ${ft.size}px sans-serif`;
+      ctx.font = `900 ${ft.size}px sans-serif`;
       ctx.textAlign = "center";
       ctx.fillStyle = ft.color;
       ctx.globalAlpha = Math.max(0, ft.life);
       ctx.shadowColor = ft.color;
-      ctx.shadowBlur = 8;
+      ctx.shadowBlur = 10;
       ctx.fillText(ft.text, ft.x, ft.y);
       ctx.restore();
     }
