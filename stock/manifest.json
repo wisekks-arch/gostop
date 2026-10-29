@@ -1,0 +1,22 @@
+{
+  "name": "StockCraft - 모의투자 및 리밸런싱 시뮬레이션 플랫폼",
+  "short_name": "StockCraft",
+  "description": "실전 리스크 없는 가상 1억 원 모의투자 및 2가지 포트폴리오 리밸런싱 전략 시뮬레이션 플랫폼",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0d1117",
+  "theme_color": "#1f6feb",
+  "icons": [
+    {
+      "src": "assets/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
+

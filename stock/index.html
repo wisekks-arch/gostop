@@ -1,0 +1,643 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>StockCraft (스톡크래프트) - 주식 시뮬레이션 및 포트폴리오 리밸런싱 플랫폼</title>
+  
+  <!-- 웹폰트 Pretendard 및 아이콘 -->
+  <link rel="stylesheet" as="style" crossorigin href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+  
+  <!-- 커스텀 스타일시트 -->
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="manifest" href="manifest.json">
+</head>
+<body>
+
+  <!-- ============================================================
+       상단 공통 헤더 (Header & Nav)
+       ============================================================ -->
+  <header class="app-header">
+    <div class="header-top">
+      <div class="brand-area" onclick="document.querySelector('.nav-tab-btn[data-tab=\'home\']').click()">
+        <span style="font-size: 1.6rem;">📈</span>
+        <span class="brand-logo">StockCraft</span>
+        <span class="brand-badge">실제시세 연동 모의투자</span>
+      </div>
+
+      <!-- 내 자산 요약 퀵 바 -->
+      <div class="quick-asset-bar">
+        <div class="asset-item">
+          <span class="asset-label">총 자산</span>
+          <span class="asset-val" id="headerTotalAssets">100,000,000원</span>
+        </div>
+        <div class="asset-item">
+          <span class="asset-label">예수금</span>
+          <span class="asset-val" id="headerCash" style="color: var(--down-blue);">100,000,000원</span>
+        </div>
+        <div class="asset-item">
+          <span class="asset-label">총 손익 (수익률)</span>
+          <span class="asset-val" id="headerProfit" style="color: var(--up-red);">+0원 (+0.00%)</span>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <button id="btnSyncAllMarketPrices" title="한국거래소/네이버/야후 실시간 시세를 가져와 전체 종목 주가를 일괄 동기화합니다" style="background: rgba(46, 160, 67, 0.15); border: 1px solid var(--accent-green); color: var(--accent-green); font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          🔄 실시간 시세 동기화
+        </button>
+        <button id="btnOpenKiwoomModal" title="키움증권 REST OpenAPI (AppKey/SecretKey) 연동 설정" style="background: rgba(163, 113, 247, 0.15); border: 1px solid var(--accent-purple); color: var(--accent-purple); font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          ⚙️ 키움 OpenAPI
+        </button>
+        <button id="btnThemeToggle" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          🌓 테마 전환
+        </button>
+        <button id="btnOpenImportHoldingModal" style="background: rgba(88, 166, 255, 0.15); border: 1px solid var(--down-blue); color: var(--down-blue); font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          📥 직접 입력
+        </button>
+        <button id="btnResetAccount" style="background: rgba(248, 81, 73, 0.15); border: 1px solid var(--up-red); color: var(--up-red); font-size: 0.75rem; padding: 0.4rem 0.75rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+          🔄 계좌 리셋 (1억)
+        </button>
+      </div>
+    </div>
+
+    <!-- 7대 메인 내비게이션 탭 -->
+    <nav class="main-nav-tabs">
+      <button class="nav-tab-btn active" data-tab="home">
+        <span>🏠</span> 홈 / 대시보드
+      </button>
+      <button class="nav-tab-btn" data-tab="trading">
+        <span>📊</span> 트레이딩룸 (차트/호가)
+      </button>
+      <button class="nav-tab-btn" data-tab="portfolio">
+        <span>💼</span> 포트폴리오 분석
+      </button>
+      <button class="nav-tab-btn" data-tab="rebalance">
+        <span>⚖️</span> 리밸런싱 전략실 <span class="nav-badge-pill">핵심</span>
+      </button>
+      <button class="nav-tab-btn" data-tab="excel">
+        <span>📑</span> 엑셀 업로드 시뮬레이션 <span class="nav-badge-pill" style="background: #2ea043; color:#fff;">신규</span>
+      </button>
+    </nav>
+  </header>
+
+  <!-- ============================================================
+       메인 뷰 컨테이너
+       ============================================================ -->
+  <main class="app-main">
+
+    <!-- ------------------------------------------------------------
+         뷰 1: 홈 / 대시보드 (tabPane-home)
+         ------------------------------------------------------------ -->
+    <section id="tabPane-home" class="tab-pane active">
+      <div id="marketTickerBanner" class="market-ticker-banner" style="margin-bottom: 1.25rem;"></div>
+
+      <div class="dashboard-grid">
+        <div class="col-12 card-box hero-asset-card">
+          <div class="stat-item">
+            <h4>총 평가 자산</h4>
+            <div class="stat-value" id="dashTotalAssets">100,000,000원</div>
+            <div class="stat-sub" style="color: var(--text-secondary);">가상 시드머니: 1억 원</div>
+          </div>
+          <div class="stat-item">
+            <h4>누적 평가 손익</h4>
+            <div class="stat-value" id="dashTotalProfit" style="color: var(--up-red);">+0원 (0.00%)</div>
+            <div class="stat-sub" style="color: var(--text-secondary);">위탁수수료(0.015%) 및 거래세(0.18%) 자동 반영</div>
+          </div>
+          <div class="stat-item">
+            <h4>추천 다음 행동</h4>
+            <div style="margin-top: 0.35rem; display: flex; gap: 0.5rem; flex-wrap: wrap;">
+              <button onclick="document.querySelector('.nav-tab-btn[data-tab=\'trading\']').click()" style="background: var(--accent-blue); color: #fff; border: none; padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                🚀 주식 매매하러 가기
+              </button>
+              <button onclick="document.querySelector('.nav-tab-btn[data-tab=\'excel\']').click()" style="background: rgba(35, 134, 54, 0.2); border: 1px solid var(--accent-green); color: var(--accent-green); padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                📑 내 실제 주식 엑셀 업로드
+              </button>
+              <button onclick="document.querySelector('.nav-tab-btn[data-tab=\'rebalance\']').click()" style="background: rgba(163, 113, 247, 0.2); border: 1px solid rgba(163, 113, 247, 0.4); color: var(--accent-purple); padding: 0.4rem 0.8rem; border-radius: 6px; font-weight: 700; font-size: 0.85rem; cursor: pointer;">
+                ⚖️ 리밸런싱 진단 받기
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- [신규 기능] 홈/대시보드 실시간 보유 주식 요약 미니 위젯 -->
+        <div class="col-12 card-box">
+          <div class="card-title">
+            <span style="display: flex; align-items: center; gap: 0.5rem;">
+              <span>💼</span> <strong>내 보유 주식 실시간 현황</strong>
+              <span id="homeHoldingsCountBadge" class="nav-badge-pill" style="background: var(--accent-blue); color: #fff;">0종목</span>
+            </span>
+            <div style="display: flex; gap: 0.5rem;">
+              <button onclick="document.querySelector('.nav-tab-btn[data-tab=\'excel\']').click()" style="background: rgba(46, 160, 67, 0.15); border: 1px solid var(--accent-green); color: var(--accent-green); padding: 0.3rem 0.7rem; border-radius: 4px; font-weight: 700; font-size: 0.8rem; cursor: pointer;">
+                📑 엑셀 일괄 등록
+              </button>
+              <button onclick="document.querySelector('.nav-tab-btn[data-tab=\'portfolio\']').click()" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.3rem 0.7rem; border-radius: 4px; font-weight: 700; font-size: 0.8rem; cursor: pointer;">
+                포트폴리오 전체보기 →
+              </button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>종목명 / 코드</th>
+                <th>보유수량</th>
+                <th>평균매입가</th>
+                <th>현재가</th>
+                <th>평가금액</th>
+                <th>평가손익</th>
+                <th>수익률</th>
+                <th>전략 처방</th>
+              </tr>
+            </thead>
+            <tbody id="homeHoldingsTableBody">
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 2rem;">
+                  보유 중인 주식이 없습니다. 상단의 <strong>'📑 내 실제 주식 엑셀 업로드'</strong> 또는 <strong>'📥 직접 입력'</strong>으로 주식을 등록해 보세요.
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         뷰 2: 트레이딩룸 (매매 화면) (tabPane-trading)
+         ------------------------------------------------------------ -->
+    <section id="tabPane-trading" class="tab-pane">
+      <div class="trading-room-layout">
+        <div class="card-box stock-selector-pane">
+          <input type="text" id="stockSearchInput" class="stock-search-input" placeholder="🔍 종목명 / 코드 검색...">
+          <div class="market-filter-tabs">
+            <button class="market-filter-btn active" data-market="ALL">전체</button>
+            <button class="market-filter-btn" data-market="KOSPI">코스피</button>
+            <button class="market-filter-btn" data-market="NASDAQ">미국주식</button>
+          </div>
+          <div id="stockListScroll" class="stock-list-scroll"></div>
+        </div>
+
+        <div class="card-box chart-pane">
+          <div class="chart-header">
+            <div class="stock-main-info" style="align-items: center; flex-wrap: wrap;">
+              <span id="chartStockName" class="info-name">삼성전자</span>
+              <span id="chartStockCode" class="info-code">005930 · KOSPI</span>
+              <span id="chartStockPrice" class="info-price" style="color: var(--up-red);">233,500 KRW</span>
+              <span id="chartStockChange" class="info-change" style="color: var(--up-red);">+3,500 (+1.52%)</span>
+              
+              <button id="btnOpenEditPriceModal" style="background: rgba(88, 166, 255, 0.15); border: 1px solid var(--down-blue); color: var(--down-blue); font-size: 0.72rem; padding: 0.2rem 0.5rem; border-radius: 4px; cursor: pointer; font-weight: 700; margin-left: 0.5rem;">
+                ✏️ 현재가 직접수정
+              </button>
+            </div>
+            <div class="chart-toolbar">
+              <button class="timeframe-btn active">일봉 (1D)</button>
+              <button class="timeframe-btn">주봉 (1W)</button>
+              <button class="timeframe-btn">60분봉</button>
+            </div>
+          </div>
+
+          <!-- [신규 기능] 차트 보조선 및 작도 툴킷 (Drawing Toolbar) -->
+          <div class="chart-drawing-toolbar">
+            <span class="draw-tool-label">🛠️ 보조선 도구:</span>
+            <button id="btnDrawHorizontal" class="draw-tool-btn" title="차트를 클릭하여 수평 지지/저항선을 그립니다">
+              ➖ 수평선
+            </button>
+            <button id="btnDrawTrend" class="draw-tool-btn" title="두 점을 클릭하여 대각선 추세선을 그립니다">
+              📈 추세선
+            </button>
+            <button id="btnDrawFibo" class="draw-tool-btn" title="고점과 저점을 클릭하여 피보나치 되돌림선을 그립니다">
+              📐 피보나치
+            </button>
+            <span style="color: var(--border-color); margin: 0 0.1rem;">|</span>
+            <button id="btnToggleBollinger" class="draw-tool-btn" title="볼린저 밴드(20, 2) 상/하한선을 켜고 끕니다">
+              🌀 볼린저밴드
+            </button>
+            <button id="btnToggleMyPrice" class="draw-tool-btn btn-active-toggle" title="보유 중인 종목의 내 평균 매입단가선을 켜고 끕니다">
+              📌 내 평단가선
+            </button>
+            <button id="btnClearDrawings" class="draw-tool-btn" style="color: var(--up-red); margin-left: auto;" title="모든 사용자 작도 보조선을 지웁니다">
+              🗑️ 지우기
+            </button>
+          </div>
+
+          <div class="chart-viewport">
+            <canvas id="tradingChartCanvas"></canvas>
+            <div id="chartInfoOverlay" class="chart-info-overlay">
+              마우스를 차트 위로 올려 시가/고가/저가/종가 및 거래량을 확인하세요.
+            </div>
+          </div>
+        </div>
+
+        <div class="order-execution-pane">
+          <div class="card-box" style="padding: 0.65rem;">
+            <div style="font-size: 0.8rem; font-weight: 700; margin-bottom: 0.4rem; color: var(--text-muted);">10단계 실시간 호가</div>
+            <table class="order-book-table">
+              <thead>
+                <tr>
+                  <th style="width: 50%;">호가 (원)</th>
+                  <th style="width: 50%;">잔량</th>
+                </tr>
+              </thead>
+              <tbody id="orderBookAsks"></tbody>
+              <tbody id="orderBookBids"></tbody>
+            </table>
+          </div>
+
+          <div class="order-form-box">
+            <div class="order-type-tabs">
+              <button id="tabOrderBuy" class="order-type-tab active-buy">매수</button>
+              <button id="tabOrderSell" class="order-type-tab">매도</button>
+            </div>
+
+            <div class="order-input-group">
+              <div class="order-input-label">
+                <span>주문 유형</span>
+              </div>
+              <select id="orderTypeSelect" class="order-input">
+                <option value="MARKET">시장가 주문 (즉시 체결)</option>
+                <option value="LIMIT">지정가 주문 (호가 도달 시)</option>
+                <option value="STOP_LOSS">예약/스탑로스 (손절선 도달 시)</option>
+              </select>
+            </div>
+
+            <div class="order-input-group">
+              <div class="order-input-label">
+                <span>주문 가격</span>
+              </div>
+              <input type="number" id="orderPriceInput" class="order-input" disabled value="233500">
+            </div>
+
+            <div id="stopPriceGroup" class="order-input-group" style="display: none;">
+              <div class="order-input-label">
+                <span style="color: var(--accent-gold);">손절 감시 기준가 (Stop Price)</span>
+              </div>
+              <input type="number" id="orderStopPriceInput" class="order-input" placeholder="손절가 입력 (예: 220000)">
+            </div>
+
+            <div class="order-input-group">
+              <div class="order-input-label">
+                <span>주문 수량</span>
+              </div>
+              <input type="number" id="orderQtyInput" class="order-input" value="10" min="1">
+              <div class="percent-chips">
+                <button class="percent-chip" data-pct="10">10%</button>
+                <button class="percent-chip" data-pct="25">25%</button>
+                <button class="percent-chip" data-pct="50">50%</button>
+                <button class="percent-chip" data-pct="100">최대</button>
+              </div>
+            </div>
+
+            <div id="orderFeeSummary" class="order-fee-summary"></div>
+
+            <button id="btnOrderSubmit" class="btn-order-submit btn-buy">
+              매수 주문 실행
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         뷰 3: 포트폴리오 분석 (tabPane-portfolio)
+         ------------------------------------------------------------ -->
+    <section id="tabPane-portfolio" class="tab-pane">
+      <div class="dashboard-grid">
+        <div class="col-3 card-box">
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">총 평가 자산</div>
+          <div id="portTotalAssets" style="font-size: 1.4rem; font-weight: 800; margin-top: 0.2rem;">0원</div>
+        </div>
+        <div class="col-3 card-box">
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">총 매입 금액</div>
+          <div id="portTotalInvested" style="font-size: 1.4rem; font-weight: 800; margin-top: 0.2rem;">0원</div>
+        </div>
+        <div class="col-3 card-box">
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">평가 손익</div>
+          <div id="portTotalPnl" style="font-size: 1.4rem; font-weight: 800; margin-top: 0.2rem; color: var(--up-red);">+0원</div>
+        </div>
+        <div class="col-3 card-box">
+          <div style="font-size: 0.8rem; color: var(--text-secondary);">누적 수익률</div>
+          <div id="portTotalRate" style="font-size: 1.4rem; font-weight: 800; margin-top: 0.2rem; color: var(--up-red);">+0.00%</div>
+        </div>
+
+        <div class="col-6 card-box">
+          <div class="card-title">
+            <span>🥧 포트폴리오 자산 배분 비중</span>
+          </div>
+          <div style="height: 220px; position: relative;">
+            <canvas id="portfolioDonutCanvas" style="width: 100%; height: 100%;"></canvas>
+          </div>
+        </div>
+
+        <div class="col-6 card-box">
+          <div class="card-title">
+            <span>📊 상세 트레이딩 통계 리포트</span>
+          </div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-top: 0.5rem;">
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color);">
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">승률 (Win Rate)</div>
+              <div id="metricWinRate" style="font-size: 1.4rem; font-weight: 800; color: var(--accent-green);">68.5%</div>
+            </div>
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color);">
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">최대 낙폭 (MDD)</div>
+              <div id="metricMdd" style="font-size: 1.4rem; font-weight: 800; color: var(--down-blue);">-4.8%</div>
+            </div>
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color);">
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">샤프 지수 (Sharpe Ratio)</div>
+              <div id="metricSharpe" style="font-size: 1.4rem; font-weight: 800; color: var(--accent-purple);">1.62</div>
+            </div>
+            <div style="background: var(--bg-secondary); padding: 1rem; border-radius: 6px; border: 1px solid var(--border-color);">
+              <div style="font-size: 0.75rem; color: var(--text-secondary);">손익비 (Profit/Loss Ratio)</div>
+              <div id="metricPlRatio" style="font-size: 1.4rem; font-weight: 800; color: var(--accent-gold);">1.94:1</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="col-12 card-box">
+          <div class="card-title">
+            <span>📋 보유 주식 잔고 현황</span>
+            <div style="display: flex; gap: 0.5rem;">
+              <button onclick="document.querySelector('.nav-tab-btn[data-tab=\'excel\']').click()" style="background: rgba(35, 134, 54, 0.15); border: 1px solid var(--accent-green); color: var(--accent-green); font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                📑 엑셀 일괄 업로드
+              </button>
+              <button id="btnPortfolioImportHolding" style="background: rgba(88, 166, 255, 0.15); border: 1px solid var(--down-blue); color: var(--down-blue); font-size: 0.75rem; padding: 0.3rem 0.6rem; border-radius: 4px; cursor: pointer; font-weight: 700;">
+                ➕ 직접 등록/수정
+              </button>
+            </div>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>종목명 / 코드</th>
+                <th>보유수량</th>
+                <th>평균매수가</th>
+                <th>현재가</th>
+                <th>평가금액</th>
+                <th>평가손익</th>
+                <th>수익률</th>
+              </tr>
+            </thead>
+            <tbody id="portfolioHoldingsTableBody"></tbody>
+          </table>
+        </div>
+
+        <div class="col-12 card-box">
+          <div class="card-title">
+            <span>📝 자동 매매 일지 및 거래 사유 메모</span>
+          </div>
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>체결일시</th>
+                <th>종목명</th>
+                <th>구분</th>
+                <th>체결가</th>
+                <th>수량</th>
+                <th>매매 사유 / 전략 메모</th>
+              </tr>
+            </thead>
+            <tbody id="tradingJournalTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         뷰 4: 리밸런싱 전략실 (tabPane-rebalance)
+         ------------------------------------------------------------ -->
+    <section id="tabPane-rebalance" class="tab-pane">
+      <div class="rebalance-mode-cards">
+        <div id="cardModeOpt1" class="rebalance-card opt1 active-card">
+          <span class="card-badge">옵션 1</span>
+          <h3>🎯 개별 단일 종목 리밸런싱 전략</h3>
+          <p>특정 종목의 기술적 지표(RSI, 이동평균선), 수익률 및 편중도를 분석하여 분할 익절, 추가 매수, 손절 처방을 제시합니다.</p>
+        </div>
+
+        <div id="cardModeOpt2" class="rebalance-card opt2">
+          <span class="card-badge">옵션 2</span>
+          <h3>🌐 전체 보유 종목 포트폴리오 리밸런싱</h3>
+          <p>공격형/균형형/방어형 자산 배분 모델 대비 비중 괴리율을 자동 산출하고, 원클릭으로 목표 비중을 일괄 맞춥니다.</p>
+        </div>
+      </div>
+
+      <div class="rebalance-workspace">
+        <div id="viewRebalanceOpt1" class="single-rebalance-view">
+          <div>
+            <div style="font-size: 0.85rem; font-weight: 700; margin-bottom: 0.6rem; color: var(--text-secondary);">진단 대상 종목 선택</div>
+            <div id="rebalanceStockSelectList" class="stock-select-list"></div>
+          </div>
+          <div id="singleStockDiagnosticBox" class="single-stock-diagnostics"></div>
+        </div>
+
+        <div id="viewRebalanceOpt2" class="portfolio-rebalance-view" style="display: none;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+            <div>
+              <div style="font-size: 0.85rem; font-weight: 700; color: var(--text-secondary); margin-bottom: 0.4rem;">목표 자산 배분 모델 프리셋 선택</div>
+              <div class="model-preset-selector">
+                <button class="preset-chip active" data-preset="BALANCED">⚖️ 중립 균형형</button>
+                <button class="preset-chip" data-preset="AGGRESSIVE">🚀 공격 성장형</button>
+                <button class="preset-chip" data-preset="DEFENSIVE">🛡️ 안정 방어형</button>
+              </div>
+            </div>
+            <button id="btnExecuteBatchRebalance" class="btn-execute-all">
+              ⚡ 원클릭 일괄 리밸런싱 실행
+            </button>
+          </div>
+
+          <div id="rebalancePresetDesc" style="font-size: 0.85rem; color: var(--down-blue); background: var(--down-blue-bg); padding: 0.6rem 0.8rem; border-radius: 6px;"></div>
+
+          <table class="rebalance-drift-table">
+            <thead>
+              <tr>
+                <th>종목명 / 코드</th>
+                <th>현재가</th>
+                <th>현재 비중 (수량)</th>
+                <th>목표 비중</th>
+                <th>비중 괴리율</th>
+                <th>권장 리밸런싱 주문</th>
+              </tr>
+            </thead>
+            <tbody id="rebalanceDriftTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ------------------------------------------------------------
+         [신규 코너] 뷰 5: 엑셀 업로드 시뮬레이션 (tabPane-excel)
+         ------------------------------------------------------------ -->
+    <section id="tabPane-excel" class="tab-pane">
+      <div class="card-box" style="margin-bottom: 1.5rem;">
+        <div class="card-title">
+          <span>📑 실제 주식 잔고 엑셀(CSV) 업로드 & 리밸런싱 시뮬레이터</span>
+          <button id="btnDownloadSampleExcel" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); font-size: 0.8rem; padding: 0.4rem 0.8rem; border-radius: 6px; cursor: pointer; font-weight: 700;">
+            📥 샘플 엑셀(CSV) 양식 받기
+          </button>
+        </div>
+
+        <div id="excelDropZone" class="excel-upload-zone">
+          <span class="excel-icon-large">📊</span>
+          <div class="excel-upload-title">증권사 엑셀/CSV 잔고 파일을 여기에 드래그하거나 클릭하세요</div>
+          <div class="excel-upload-desc">
+            실제 주식 계좌의 보유 종목과 매입단가를 업로드하시면, 브라우저에서 안전하게 읽어 들여 <strong>즉시 모의 포트폴리오를 구성하고 리밸런싱 전략을 분석</strong>해 드립니다.
+          </div>
+          <div class="excel-actions-row">
+            <button id="btnSelectExcelFile" style="background: var(--accent-blue); color: #fff; border: none; padding: 0.6rem 1.25rem; border-radius: 6px; font-weight: 700; cursor: pointer;">
+              파일 찾아보기 (.xlsx, .csv)
+            </button>
+            <input type="file" id="inputExcelFile" accept=".csv, .xlsx, .txt" style="display: none;">
+          </div>
+        </div>
+      </div>
+
+      <div id="excelPreviewSection" class="card-box" style="display: none;">
+        <div class="card-title">
+          <span>📋 엑셀 파싱 완료 목록 (<span id="excelParsedCount">0</span>개 종목)</span>
+          <button id="btnApplyExcelHoldings" class="btn-execute-all" style="padding: 0.5rem 1.25rem; font-size: 0.9rem;">
+            ⚡ 내 포트폴리오로 일괄 적용 & 리밸런싱 시작
+          </button>
+        </div>
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>종목코드</th>
+              <th>종목명</th>
+              <th>보유수량</th>
+              <th>평균매입단가</th>
+              <th>적용 현재가</th>
+              <th>예상 총 평가금액</th>
+            </tr>
+          </thead>
+          <tbody id="excelPreviewTableBody"></tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- 모달 1: 현재가 수정 -->
+  <div id="modalEditPrice" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalEditPriceTitle" style="font-size: 1.15rem; font-weight: 800;">종목 현재가 직접 수정</h3>
+        <button id="btnCloseEditPriceModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          실제 증권사 HTS/MTS에서 확인하신 최신 실제 주가를 입력하시면, 차트/호가창/포트폴리오에 실시간으로 즉시 동기화됩니다.
+        </p>
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">새로운 현재가 입력</label>
+          <input type="number" id="inputNewPriceValue" class="order-input" style="font-size: 1.1rem; font-weight: 800;" placeholder="예: 233500">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+          <button id="btnCancelEditPrice" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">취소</button>
+          <button id="btnSaveNewPrice" style="background: var(--accent-blue); border: none; color: #fff; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 800;">실제 시세로 동기화</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 2: 내 실제 주식 등록/수정 -->
+  <div id="modalImportHolding" class="modal-overlay">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; font-weight: 800;">내 실제 보유 주식 등록 / 수정</h3>
+        <button id="btnCloseImportModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <p style="font-size: 0.85rem; color: var(--text-secondary);">
+          현재 실제 계좌에 보유 중인 종목과 매입단가, 수량을 등록하면 리밸런싱 전략실에서 즉시 맞춤형 비중 조절 처방을 받아보실 수 있습니다.
+        </p>
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">종목 선택</label>
+          <select id="selectImportStock" class="order-input"></select>
+        </div>
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">보유 수량 (주)</label>
+          <input type="number" id="inputImportQty" class="order-input" placeholder="보유 수량 (0 입력 시 삭제)" value="100">
+        </div>
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">평균 매입 단가 (원/달러)</label>
+          <input type="number" id="inputImportAvgPrice" class="order-input" placeholder="평균 매입 단가 입력" value="225000">
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 0.5rem; margin-top: 0.5rem;">
+          <button id="btnCancelImport" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">취소</button>
+          <button id="btnSaveImportHolding" style="background: var(--accent-green); border: none; color: #fff; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 800;">내 포트폴리오에 즉시 반영</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 3: 키움 OpenAPI 설정 -->
+  <div id="modalKiwoomConfig" class="modal-overlay">
+    <div class="modal-content" style="max-width: 520px;">
+      <div class="modal-header">
+        <h3 style="font-size: 1.15rem; font-weight: 800;">⚙️ 키움증권 REST OpenAPI 연동 설정</h3>
+        <button id="btnCloseKiwoomModal" class="modal-close-btn">&times;</button>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 1rem;">
+        <div style="background: rgba(163, 113, 247, 0.1); border: 1px solid rgba(163, 113, 247, 0.3); padding: 0.75rem; border-radius: 6px; font-size: 0.8rem; color: var(--text-secondary); line-height: 1.4;">
+          💡 <strong>안내</strong>: 키움 REST API 명세서(<code>au10001</code>, <code>ka10001</code>, <code>ka10004</code>) 기반으로 브라우저에서 직접 시세를 호출합니다.<br>
+          입력하신 키 정보는 외부에 전송되지 않고 본인 <strong>브라우저(LocalStorage)에만 안전하게 보관</strong>됩니다.
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">키움 OpenAPI 사용 여부</label>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.85rem; font-weight: 700;">
+            <input type="checkbox" id="chkUseKiwoom" style="width: 1.1rem; height: 1.1rem;">
+            키움 OpenAPI 실시간 시세 연동 활성화
+          </label>
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">서버 환경 선택</label>
+          <select id="selectKiwoomServer" class="order-input">
+            <option value="mock">모의투자 서버 (https://mockapi.kiwoom.com)</option>
+            <option value="real">실거래 정규 서버 (https://api.kiwoom.com)</option>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">App Key (앱키)</label>
+          <input type="password" id="inputKiwoomAppKey" class="order-input" placeholder="키움 발급 앱키를 입력하세요">
+        </div>
+
+        <div>
+          <label style="font-size: 0.78rem; color: var(--text-secondary); display: block; margin-bottom: 0.35rem;">Secret Key (시크릿키)</label>
+          <input type="password" id="inputKiwoomSecretKey" class="order-input" placeholder="키움 발급 시크릿키를 입력하세요">
+        </div>
+
+        <div>
+          <label style="display: flex; align-items: center; gap: 0.5rem; cursor: pointer; font-size: 0.8rem; color: var(--text-secondary);">
+            <input type="checkbox" id="chkUseCorsProxy" checked style="width: 1rem; height: 1rem;">
+            브라우저 CORS 우회 프록시 사용 (권장)
+          </label>
+        </div>
+
+        <div id="kiwoomStatusMessage" style="font-size: 0.82rem; padding: 0.5rem; border-radius: 4px; display: none;"></div>
+
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.5rem;">
+          <button id="btnTestKiwoom" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 700; font-size: 0.8rem;">
+            🔍 연결 테스트 & 토큰 발급
+          </button>
+          <div style="display: flex; gap: 0.5rem;">
+            <button id="btnCancelKiwoom" style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.5rem 1rem; border-radius: 6px; cursor: pointer; font-weight: 600;">취소</button>
+            <button id="btnSaveKiwoomConfig" style="background: var(--accent-purple); border: none; color: #fff; padding: 0.5rem 1.25rem; border-radius: 6px; cursor: pointer; font-weight: 800;">설정 저장</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- 스크립트 모듈 로드 -->
+  <script src="js/marketData.js"></script>
+  <script src="js/kiwoomApi.js"></script>
+  <script src="js/tradingEngine.js"></script>
+  <script src="js/chartManager.js"></script>
+  <script src="js/rebalancingEngine.js"></script>
+  <script src="js/excelImporter.js"></script>
+  <script src="js/analytics.js"></script>
+  <script src="js/app.js"></script>
+
+</body>
+</html>
