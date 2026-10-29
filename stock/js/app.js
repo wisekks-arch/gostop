@@ -189,6 +189,19 @@ document.addEventListener("DOMContentLoaded", () => {
         renderStockList();
       });
     });
+
+    // [신규 기능] 차트 주기(일봉 1D / 주봉 1W / 60분봉 60M) 전환 이벤트 바인딩
+    const timeframeBtns = document.querySelectorAll(".timeframe-btn");
+    timeframeBtns.forEach(btn => {
+      btn.addEventListener("click", () => {
+        timeframeBtns.forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const tf = btn.getAttribute("data-timeframe") || "1D";
+        ChartManager.setTimeframe(tf);
+        const tfName = tf === "1W" ? "주봉 (1W)" : (tf === "60M" ? "60분봉 (60M)" : "일봉 (1D)");
+        showToast(`차트 주기가 '${tfName}'으로 전환되었습니다.`, "toast-info");
+      });
+    });
   }
 
   // ============================================================

@@ -177,25 +177,54 @@ const MarketDataEngine = (() => {
   // 종목별 캔들스틱 히스토리 저장소
   const candleHistoryMap = new Map();
 
-  // 현실적인 캔들 데이터 생성
-  function generateCandles(basePrice, count = 40) {
+  // 현실적인 캔들 데이터 생성 (일봉 1D, 주봉 1W, 60분봉 60M 지원)
+  function generateCandles(basePrice, timeframe = "1D", count = 40) {
     const candles = [];
     let current = basePrice * 0.88;
     const now = Date.now();
     const dayMs = 24 * 60 * 60 * 1000;
+    const hourMs = 60 * 60 * 1000;
 
-    for (let i = count; i >= 0; i--) {
-      const time = new Date(now - i * dayMs);
-      const volatility = current * 0.022;
+    let stepMs = dayMs;
+    let volatilityRate = 0.022;
+    let actualCount = count;
+
+    if (timeframe === "1W") {
+      stepMs = 7 * dayMs;
+      volatilityRate = 0.042;
+      actualCount = 35;
+      current = basePrice * 0.82;
+    } else if (timeframe === "60M") {
+      stepMs = hourMs;
+      volatilityRate = 0.011;
+      actualCount = 42;
+      current = basePrice * 0.95;
+    }
+
+    for (let i = actualCount; i >= 0; i--) {
+      const timeObj = new Date(now - i * stepMs);
+      const volatility = current * volatilityRate;
       const change = (Math.random() - 0.47) * volatility;
       const open = Math.round(current);
       const close = Math.round(current + change);
       const high = Math.round(Math.max(open, close) + Math.random() * volatility * 0.7);
       const low = Math.round(Math.min(open, close) - Math.random() * volatility * 0.7);
-      const volume = Math.round(500000 + Math.random() * 2000000);
+      const volume = Math.round(timeframe === "60M" ? (50000 + Math.random() * 250000) : (500000 + Math.random() * 2000000));
+
+      let timeLabel = "";
+      if (timeframe === "60M") {
+        const m = String(timeObj.getMonth() + 1).padStart(2, "0");
+        const d = String(timeObj.getDate()).padStart(2, "0");
+        const h = String(timeObj.getHours()).padStart(2, "0");
+        timeLabel = `${m}/${d} ${h}:00`;
+      } else if (timeframe === "1W") {
+        timeLabel = timeObj.toISOString().split("T")[0] + " (주)";
+      } else {
+        timeLabel = timeObj.toISOString().split("T")[0];
+      }
 
       candles.push({
-        time: time.toISOString().split("T")[0],
+        time: timeLabel,
         open,
         high,
         low,
@@ -227,10 +256,31 @@ const MarketDataEngine = (() => {
     return false;
   }
 
+  // 종목별 타임프레임 캔들 빌드 헬퍼
+  function buildCandlesForStock(stock) {
+    ["1D", "1W", "60M"].forEach(tf => {
+      candleHistoryMap.set(`${stock.code}_${tf}`, generateCandles(stock.price, tf));
+    });
+  }
+
+  // 최신 가격 동기화 헬퍼 (모든 주기 동시 반영)
+  function syncAllTimeframeCandles(code, newPrice) {
+    ["1D", "1W", "60M"].forEach(tf => {
+      const key = `${code}_${tf}`;
+      const candles = candleHistoryMap.get(key);
+      if (candles && candles.length > 0) {
+        const last = candles[candles.length - 1];
+        last.close = Number(newPrice);
+        if (newPrice > last.high) last.high = Number(newPrice);
+        if (newPrice < last.low) last.low = Number(newPrice);
+      }
+    });
+  }
+
   // 초기 캔들 히스토리 빌드 (저장된 종목 우선)
   loadCustomStocksFromStorage();
   stockDatabase.forEach(stock => {
-    candleHistoryMap.set(stock.code, generateCandles(stock.price));
+    buildCandlesForStock(stock);
   });
 
   // 호가창(Order Book) 계산
@@ -283,14 +333,15 @@ const MarketDataEngine = (() => {
     return stockDatabase.filter(s => s.market === market);
   }
 
-  function getCandles(code) {
-    if (candleHistoryMap.has(code)) {
-      return candleHistoryMap.get(code);
+  function getCandles(code, timeframe = "1D") {
+    const key = `${code}_${timeframe}`;
+    if (candleHistoryMap.has(key)) {
+      return candleHistoryMap.get(key);
     }
     const stock = getStockByCode(code);
     const basePrice = stock ? stock.price : 10000;
-    const candles = generateCandles(basePrice);
-    candleHistoryMap.set(code, candles);
+    const candles = generateCandles(basePrice, timeframe);
+    candleHistoryMap.set(key, candles);
     return candles;
   }
 
@@ -309,16 +360,8 @@ const MarketDataEngine = (() => {
     if (stock.price > stock.high) stock.high = stock.price;
     if (stock.price < stock.low) stock.low = stock.price;
 
-    // 캔들 히스토리 마지막 캔들 동기화
-    const candles = candleHistoryMap.get(code);
-    if (candles && candles.length > 0) {
-      const last = candles[candles.length - 1];
-      last.close = stock.price;
-      if (stock.price > last.high) last.high = stock.price;
-      if (stock.price < last.low) last.low = stock.price;
-    } else {
-      candleHistoryMap.set(code, generateCandles(stock.price));
-    }
+    // 모든 타임프레임(1D, 1W, 60M) 캔들 히스토리 마지막 캔들 동기화
+    syncAllTimeframeCandles(code, stock.price);
 
     return true;
   }
@@ -340,16 +383,8 @@ const MarketDataEngine = (() => {
         if (q.low) stock.low = Math.min(stock.low, Number(q.low));
         if (q.volume) stock.volume = Number(q.volume);
 
-        // 캔들 히스토리의 최신 캔들 동기화
-        const candles = candleHistoryMap.get(q.code);
-        if (candles && candles.length > 0) {
-          const last = candles[candles.length - 1];
-          last.close = stock.price;
-          if (stock.price > last.high) last.high = stock.price;
-          if (stock.price < last.low) last.low = stock.price;
-        } else {
-          candleHistoryMap.set(q.code, generateCandles(stock.price));
-        }
+        // 모든 타임프레임 최신 캔들 동기화
+        syncAllTimeframeCandles(q.code, stock.price);
         count++;
       }
     });
@@ -395,7 +430,7 @@ const MarketDataEngine = (() => {
     };
 
     stockDatabase.push(newStock);
-    candleHistoryMap.set(newStock.code, generateCandles(newStock.price));
+    buildCandlesForStock(newStock);
     return newStock;
   }
 
@@ -442,7 +477,7 @@ const MarketDataEngine = (() => {
     stockDatabase = JSON.parse(JSON.stringify(DEFAULT_STOCK_DATABASE));
     candleHistoryMap.clear();
     stockDatabase.forEach(s => {
-      candleHistoryMap.set(s.code, generateCandles(s.price));
+      buildCandlesForStock(s);
     });
     return true;
   }
@@ -459,14 +494,7 @@ const MarketDataEngine = (() => {
     if (stock.price < stock.low) stock.low = stock.price;
     stock.volume += Math.round(50 + Math.random() * 500);
 
-    const candles = candleHistoryMap.get(stock.code);
-    if (candles && candles.length > 0) {
-      const last = candles[candles.length - 1];
-      last.close = stock.price;
-      if (stock.price > last.high) last.high = stock.price;
-      if (stock.price < last.low) last.low = stock.price;
-      last.volume += 50;
-    }
+    syncAllTimeframeCandles(stock.code, stock.price);
 
     return stock;
   }

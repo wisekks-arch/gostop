@@ -9,6 +9,7 @@ const ChartManager = (() => {
   let canvas = null;
   let ctx = null;
   let currentStockCode = "005930";
+  let currentTimeframe = "1D"; // '1D'(일봉), '1W'(주봉), '60M'(60분봉)
   let mousePos = { x: -1, y: -1 };
   let isHovered = false;
 
@@ -121,6 +122,14 @@ const ChartManager = (() => {
   }
 
   /**
+   * [신규 기능] 차트 주기(Timeframe: 일봉/주봉/60분봉) 설정
+   */
+  function setTimeframe(tf) {
+    currentTimeframe = tf || "1D";
+    render();
+  }
+
+  /**
    * 작도 도구 모드 설정
    */
   function setDrawingTool(toolName) {
@@ -166,7 +175,7 @@ const ChartManager = (() => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    const candles = MarketDataEngine.getCandles(currentStockCode);
+    const candles = MarketDataEngine.getCandles(currentStockCode, currentTimeframe);
     if (!candles || candles.length === 0) return;
 
     const width = rect.width;
@@ -251,7 +260,7 @@ const ChartManager = (() => {
 
     ctx.clearRect(0, 0, width, height);
 
-    const candles = MarketDataEngine.getCandles(currentStockCode);
+    const candles = MarketDataEngine.getCandles(currentStockCode, currentTimeframe);
     if (!candles || candles.length === 0) return;
 
     const isLight = document.body.classList.contains("light-theme");
@@ -604,6 +613,8 @@ const ChartManager = (() => {
     init,
     resizeCanvas,
     setStock,
+    setTimeframe,
+    getCurrentTimeframe: () => currentTimeframe,
     setDrawingTool,
     getCurrentDrawingTool: () => currentTool,
     toggleBollingerBands,
