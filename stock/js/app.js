@@ -148,6 +148,8 @@ document.addEventListener("DOMContentLoaded", () => {
       renderPortfolioView();
     } else if (tabId === "rebalance") {
       renderRebalancingView();
+    } else if (tabId === "config") {
+      loadRebalanceConfigForm();
     }
     updateHeaderAssets();
   }
@@ -1040,7 +1042,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (cardOpt1) cardOpt1.addEventListener("click", () => switchRebalanceMode("opt1"));
     if (cardOpt2) cardOpt2.addEventListener("click", () => switchRebalanceMode("opt2"));
-    if (cardOpt3) cardOpt3.addEventListener("click", () => switchRebalanceMode("opt3"));
+    if (cardOpt3) cardOpt3.addEventListener("click", () => switchTab("config"));
 
     document.querySelectorAll(".preset-chip").forEach(chip => {
       chip.addEventListener("click", () => {
@@ -1098,10 +1100,12 @@ document.addEventListener("DOMContentLoaded", () => {
     // [신규 기능] 옵션 3 설정 폼 저장 및 복원 버튼 이벤트
     const btnSaveCfg = document.getElementById("btnSaveRebalanceConfig");
     const btnResetCfg = document.getElementById("btnResetRebalanceConfig");
+    const btnReturnRebalance = document.getElementById("btnReturnToRebalance");
 
     if (btnSaveCfg) {
       btnSaveCfg.addEventListener("click", () => {
         saveRebalanceConfigFromForm();
+        renderRebalancingView();
       });
     }
 
@@ -1110,8 +1114,15 @@ document.addEventListener("DOMContentLoaded", () => {
         if (confirm("모든 리밸런싱 기술적 지표 및 매매 규칙을 표준 기본값으로 복원하시겠습니까?")) {
           RebalancingEngine.resetConfig();
           loadRebalanceConfigForm();
+          renderRebalancingView();
           showToast("리밸런싱 설정이 기본값으로 복원되었습니다.", "toast-info");
         }
+      });
+    }
+
+    if (btnReturnRebalance) {
+      btnReturnRebalance.addEventListener("click", () => {
+        switchTab("rebalance");
       });
     }
   }

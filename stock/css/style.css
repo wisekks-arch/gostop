@@ -786,7 +786,7 @@ body.light-theme .percent-chip:hover { background-color: rgba(0, 0, 0, 0.06); }
    ============================================================ */
 .rebalance-mode-cards {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1.25rem;
   margin-bottom: 1.5rem;
 }
