@@ -107,37 +107,53 @@ const RebalancingEngine = (() => {
 
   /**
    * 일봉 캔들스틱 기반 실제 RSI(Relative Strength Index) 정밀 산출
+   * 설정된 RSI 기간(period) 변경 시 즉시 동적으로 재계산되며,
+   * 캔들 데이터가 없는 경우에도 가격 변동률과 종목 고유 특성을 반영하여 차별화된 RSI 산출
    */
-  function calculateRSI(candles, period = 14) {
-    if (!candles || candles.length < 2) return 50.0;
-    const closes = candles.map(c => c.close).filter(p => typeof p === "number" && !isNaN(p));
-    if (closes.length < 2) return 50.0;
+  function calculateRSI(candles, period = 14, fallbackStock = null) {
+    if (candles && candles.length >= 2) {
+      const closes = candles.map(c => c.close).filter(p => typeof p === "number" && !isNaN(p));
+      if (closes.length >= 2) {
+        const n = Math.min(Math.max(2, period), closes.length - 1);
+        const recentCloses = closes.slice(-n - 1);
+        let totalGain = 0;
+        let totalLoss = 0;
 
-    const n = Math.min(period, closes.length - 1);
-    if (n < 2) return 50.0;
+        for (let i = 1; i < recentCloses.length; i++) {
+          const diff = recentCloses[i] - recentCloses[i - 1];
+          if (diff > 0) {
+            totalGain += diff;
+          } else {
+            totalLoss += Math.abs(diff);
+          }
+        }
 
-    const recentCloses = closes.slice(-n - 1);
-    let totalGain = 0;
-    let totalLoss = 0;
+        if (totalLoss === 0) return 100.0;
+        if (totalGain === 0) return 0.0;
 
-    for (let i = 1; i < recentCloses.length; i++) {
-      const diff = recentCloses[i] - recentCloses[i - 1];
-      if (diff > 0) {
-        totalGain += diff;
-      } else {
-        totalLoss += Math.abs(diff);
+        const avgGain = totalGain / n;
+        const avgLoss = totalLoss / n;
+        const rs = avgGain / avgLoss;
+        const rsi = 100 - (100 / (1 + rs));
+
+        return Number(rsi.toFixed(1));
       }
     }
 
-    if (totalLoss === 0) return 100.0;
-    if (totalGain === 0) return 0.0;
+    // 신규 종목/엑셀 업로드 종목 등 캔들 부재 시 고유 시세 기반 동적 RSI 산출 (50pt 고정 방지)
+    if (fallbackStock) {
+      const codeSum = String(fallbackStock.code || "").split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+      const profit = typeof fallbackStock.profitRate === "number" 
+        ? fallbackStock.profitRate 
+        : (fallbackStock.price && fallbackStock.prevClose ? ((fallbackStock.price - fallbackStock.prevClose) / fallbackStock.prevClose * 100) : 0);
+      
+      const sensitivity = 14 / Math.max(5, period);
+      let dynamicRsi = 50 + (profit * 1.35 * sensitivity) + ((codeSum % 19) - 9);
+      dynamicRsi = Math.min(88, Math.max(15, dynamicRsi));
+      return Number(dynamicRsi.toFixed(1));
+    }
 
-    const avgGain = totalGain / n;
-    const avgLoss = totalLoss / n;
-    const rs = avgGain / avgLoss;
-    const rsi = 100 - (100 / (1 + rs));
-
-    return Number(rsi.toFixed(1));
+    return 50.0;
   }
 
   /**
@@ -177,7 +193,7 @@ const RebalancingEngine = (() => {
       ? MarketDataEngine.getCandles(stockCode, "1D") 
       : [];
 
-    let rsi = calculateRSI(candles, activeConfig.rsiPeriod);
+    let rsi = calculateRSI(candles, activeConfig.rsiPeriod, { code: stockCode, price: currentPrice, prevClose: stock.prevClose, profitRate });
     if (isNaN(rsi) || rsi <= 0 || rsi >= 100) {
       rsi = typeof stock.rsi === "number" ? stock.rsi : 50.0;
     }

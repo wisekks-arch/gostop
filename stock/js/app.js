@@ -1330,7 +1330,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     RebalancingEngine.saveConfig(newCfg);
     renderRebalancingView();
-    showToast("리밸런싱 기술적 지표 & 매매 전략 설정이 성공적으로 저장되었습니다!", "toast-success");
+    // [유기적 연동 핵심] 설정 저장 즉시 리밸런싱 전략실로 자동 이동하여 변경된 지표 및 처방 즉각 확인
+    switchTab("rebalance");
+    showToast("✅ 설정이 저장되어 리밸런싱 전략실에 즉시 실시간 반영되었습니다!", "toast-success");
   }
 
   // [신규 기능] 기술적 지표 & 매매 전략 파라미터 설정 가이드 모달 제어
