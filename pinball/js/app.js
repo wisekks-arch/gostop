@@ -419,7 +419,57 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
   }
 
+  // ============================================================
+  // 🎯 3대 명작 핀볼 머신 선택 시스템 연동
+  // ============================================================
+  const machineCards = document.querySelectorAll(".machine-select-card");
+  const lblSelectedMachine = document.getElementById("lblSelectedMachine");
+  const btnSwitchMachine = document.getElementById("btnSwitchMachine");
+  const machineList = ["AVENGERS", "PIRATE", "GUARDIANS"];
+
+  function selectMachine(machineId) {
+    machineCards.forEach(c => {
+      if (c.getAttribute("data-machine") === machineId) {
+        c.classList.add("active");
+      } else {
+        c.classList.remove("active");
+      }
+    });
+
+    const switched = GameEngine.switchTheme(machineId);
+    if (switched) {
+      if (lblSelectedMachine) {
+        lblSelectedMachine.textContent = `${switched.name.split(":")[0]} 선택됨`;
+      }
+      if (elThemeName) {
+        elThemeName.textContent = switched.name.split(":")[0];
+      }
+    }
+  }
+
+  // 로비 카드 클릭 이벤트
+  machineCards.forEach(card => {
+    card.addEventListener("click", () => {
+      AudioManager.initAudio();
+      const mId = card.getAttribute("data-machine");
+      selectMachine(mId);
+    });
+  });
+
+  // 인게임 상단 HUD 머신 전환 버튼 (순환 스위칭)
+  if (btnSwitchMachine) {
+    btnSwitchMachine.addEventListener("click", () => {
+      AudioManager.initAudio();
+      const state = GameEngine.getGameState();
+      const curId = (state.theme && state.theme.id) || "AVENGERS";
+      const nextIdx = (machineList.indexOf(curId) + 1) % machineList.length;
+      selectMachine(machineList[nextIdx]);
+    });
+  }
+
   // 초기 실행
+  const initialTheme = GameEngine.getProfile().currentTheme || "AVENGERS";
+  selectMachine(initialTheme);
   refreshUserProfileUI();
   showModal(modalLobby);
   requestAnimationFrame(gameLoop);

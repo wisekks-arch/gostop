@@ -7,7 +7,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Pinball Rush (핀볼 러시) - 모바일 아케이드 핀볼</title>
-  <link rel="stylesheet" href="css/style.css?v=20261029_1715">
+  <link rel="stylesheet" href="css/style.css?v=20261029_1730">
 </head>
 <body>
 
@@ -23,7 +23,9 @@
 
       <div class="hud-center">
         <div id="hudCombo" class="hud-combo-badge">x1</div>
-        <span id="hudThemeName" class="hud-theme-pill">월드 1: 클래식</span>
+        <button id="btnSwitchMachine" class="hud-theme-pill" title="머신 변경">
+          <span id="hudThemeName">🦸‍♂️ 어벤져스</span> 🔄
+        </button>
       </div>
 
       <div class="hud-right">
@@ -89,6 +91,58 @@
           <p style="font-size: 0.85rem; color: var(--accent-magenta); font-weight: 700;">
             ⚡ 정밀 물리 & 네온 아케이드 핀볼 ⚡
           </p>
+        </div>
+
+        <!-- 명언 / 홍보 배너 카드 -->
+        <div class="lobby-banner-box">
+          <div class="banner-badge">★ LEGENDARY PINBALL ★</div>
+          <div class="banner-title">"단순한데 왜 이렇게 재밌을까?<br>핀볼게임의 숨은 매력"</div>
+          <div class="banner-sub">실사 명작 핀볼 머신 3종을 직접 선택하여 즐겨보세요!</div>
+        </div>
+
+        <!-- 3대 명작 핀볼 머신 선택 캐러셀/그리드 -->
+        <div class="machine-selector-section">
+          <div class="machine-sec-title">
+            <span>🎯 핀볼 머신 선택 (3대 명작)</span>
+            <span id="lblSelectedMachine" class="machine-active-name">어벤져스 선택됨</span>
+          </div>
+          <div class="machine-card-grid">
+            <!-- 머신 1: 어벤져스 -->
+            <div class="machine-select-card active" data-machine="AVENGERS">
+              <div class="machine-card-thumb-wrap">
+                <img src="assets/table_avengers.jpg" alt="어벤져스 인피니티 퀘스트" class="machine-thumb-img">
+                <span class="machine-chip">추천 1위</span>
+              </div>
+              <div class="machine-card-info">
+                <div class="machine-card-title">🦸‍♂️ 어벤져스</div>
+                <div class="machine-card-sub">인피니티 퀘스트</div>
+              </div>
+            </div>
+
+            <!-- 머신 2: 해적선 블랙로즈 -->
+            <div class="machine-select-card" data-machine="PIRATE">
+              <div class="machine-card-thumb-wrap">
+                <img src="assets/table_pirate.jpg" alt="블랙 로즈 해적선" class="machine-thumb-img">
+                <span class="machine-chip" style="background: #f59e0b; color: #000;">해적 대포</span>
+              </div>
+              <div class="machine-card-info">
+                <div class="machine-card-title">🏴‍☠️ 블랙 로즈</div>
+                <div class="machine-card-sub">싱크 쉽 (Sink Ship)</div>
+              </div>
+            </div>
+
+            <!-- 머신 3: 가디언즈 오브 갤럭시 -->
+            <div class="machine-select-card" data-machine="GUARDIANS">
+              <div class="machine-card-thumb-wrap">
+                <img src="assets/table_guardians.jpg" alt="가디언즈 오브 갤럭시" class="machine-thumb-img">
+                <span class="machine-chip" style="background: #06b6d4; color: #000;">그루트</span>
+              </div>
+              <div class="machine-card-info">
+                <div class="machine-card-title">🚀 가디언즈</div>
+                <div class="machine-card-sub">오브 갤럭시</div>
+              </div>
+            </div>
+          </div>
         </div>
 
         <!-- 유저 프로필 카드 -->
@@ -247,13 +301,13 @@
   </div>
 
   <!-- 스크립트 모듈 로드 -->
-  <script src="js/audioManager.js?v=20261029_1715"></script>
-  <script src="js/physicsEngine.js?v=20261029_1715"></script>
-  <script src="js/worldThemes.js?v=20261029_1715"></script>
-  <script src="js/mapRenderer.js?v=20261029_1715"></script>
-  <script src="js/skillEngine.js?v=20261029_1715"></script>
-  <script src="js/gameEngine.js?v=20261029_1715"></script>
-  <script src="js/app.js?v=20261029_1715"></script>
+  <script src="js/audioManager.js?v=20261029_1730"></script>
+  <script src="js/physicsEngine.js?v=20261029_1730"></script>
+  <script src="js/worldThemes.js?v=20261029_1730"></script>
+  <script src="js/mapRenderer.js?v=20261029_1730"></script>
+  <script src="js/skillEngine.js?v=20261029_1730"></script>
+  <script src="js/gameEngine.js?v=20261029_1730"></script>
+  <script src="js/app.js?v=20261029_1730"></script>
 
 </body>
 </html>

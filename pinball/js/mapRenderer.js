@@ -13,9 +13,17 @@ const MapRenderer = (() => {
   const particles = [];
   const floatingTexts = [];
 
-  // [신규] 실제 클래식 핀볼 머신 실사 플레이필드 이미지 자산 로드
-  const realTableImage = new Image();
-  realTableImage.src = "assets/table_bg.jpg?v=20261029_1700";
+  // [3대 명작 핀볼 머신 실사 텍스처 자산 로드]
+  const themeImages = {
+    AVENGERS: new Image(),
+    PIRATE: new Image(),
+    GUARDIANS: new Image(),
+    SPACE: new Image()
+  };
+  themeImages.AVENGERS.src = "assets/table_avengers.jpg?v=20261029_1730";
+  themeImages.PIRATE.src = "assets/table_pirate.jpg?v=20261029_1730";
+  themeImages.GUARDIANS.src = "assets/table_guardians.jpg?v=20261029_1730";
+  themeImages.SPACE.src = "assets/table_space.jpg?v=20261029_1730";
 
   // 전구 애니메이션 타이머
   let chaserStep = 0;
@@ -145,11 +153,14 @@ const MapRenderer = (() => {
     ctx.restore();
   }
 
-  // 1. 캐비닛 배경 (실제 핀볼 머신 고화질 실사 이미지 렌더링)
+  // 1. 캐비닛 배경 (선택된 3대 명작 핀볼 머신 고화질 실사 이미지 렌더링)
   function renderCabinetBackground(theme) {
-    if (realTableImage && realTableImage.complete && realTableImage.naturalWidth > 0) {
-      // 실사 핀볼 플레이필드 텍스처 렌더링 (첨부 사진 고화질 그래픽)
-      ctx.drawImage(realTableImage, 0, 0, V_WIDTH, V_HEIGHT);
+    const key = (theme && theme.bgImageKey) ? theme.bgImageKey : "AVENGERS";
+    const bgImg = themeImages[key] || themeImages.AVENGERS;
+
+    if (bgImg && bgImg.complete && bgImg.naturalWidth > 0) {
+      // 실사 핀볼 플레이필드 텍스처 렌더링 (선택된 머신 그래픽)
+      ctx.drawImage(bgImg, 0, 0, V_WIDTH, V_HEIGHT);
 
       // 입체적인 핀볼 유리 덮개 반사광 (Glass Reflection)
       const glassGrad = ctx.createLinearGradient(0, 0, V_WIDTH, V_HEIGHT);
@@ -162,9 +173,9 @@ const MapRenderer = (() => {
     } else {
       // 이미지 로드 전 또는 대체 그라디언트
       const grad = ctx.createLinearGradient(0, 0, 0, V_HEIGHT);
-      grad.addColorStop(0, theme.bgGradient[0]);
-      grad.addColorStop(0.5, theme.bgGradient[1]);
-      grad.addColorStop(1, theme.bgGradient[2]);
+      grad.addColorStop(0, theme.bgGradient ? theme.bgGradient[0] : "#0b0e24");
+      grad.addColorStop(0.5, theme.bgGradient ? theme.bgGradient[1] : "#1d234d");
+      grad.addColorStop(1, theme.bgGradient ? theme.bgGradient[2] : "#0c102b");
       ctx.fillStyle = grad;
       ctx.fillRect(0, 0, V_WIDTH, V_HEIGHT);
     }
@@ -285,78 +296,123 @@ const MapRenderer = (() => {
     });
   }
 
-  // 5. 상단 3단 네온 백글래스 & 대형 점수 전광판 (사진 속 SPACE MISSION & PINBALL CHAMPION)
+  // 5. 상단 3단 네온 백글래스 & 대형 점수 전광판 (3대 명작 핀볼 머신별 맞춤형 전광판)
   function renderDMDDisplay(gameState) {
     ctx.save();
+    const theme = gameState.theme || {};
+    const dmdType = theme.dmdType || "AVENGERS";
 
-    // 1) 좌측 윙: SPACE MISSION 네온 박스
     const wingW = 95;
     const wingH = 46;
+
+    let leftTop = "🦸‍♂️ AVENGERS";
+    let leftSub = "MARVEL HERO";
+    let leftBorder = "#ef4444";
+    let centerTitle = "INFINITY QUEST";
+    let centerBorder = "#f59e0b";
+    let centerLED = "#ffaa00";
+    let rightTop = "💎 6 STONES";
+    let rightSub = "ASSEMBLE!";
+    let rightBorder = "#3b82f6";
+
+    if (dmdType === "PIRATE") {
+      leftTop = "🏴‍☠️ BLACK";
+      leftSub = "ROSE SHIP";
+      leftBorder = "#f59e0b";
+      centerTitle = "SINK SHIP!";
+      centerBorder = "#ef4444";
+      centerLED = "#fbbf24";
+      rightTop = "⚓ JACKPOT";
+      rightSub = "FIRE CANNON";
+      rightBorder = "#10b981";
+    } else if (dmdType === "GUARDIANS") {
+      leftTop = "🚀 GROOT";
+      leftSub = "WE ARE GROOT";
+      leftBorder = "#84cc16";
+      centerTitle = "GUARDIANS";
+      centerBorder = "#ec4899";
+      centerLED = "#06b6d4";
+      rightTop = "🎧 STAR-LORD";
+      rightSub = "AWESOME MIX";
+      rightBorder = "#ec4899";
+    } else if (dmdType === "SPACE") {
+      leftTop = "🚀 SPACE";
+      leftSub = "MISSION";
+      leftBorder = "#00f0ff";
+      centerTitle = "FREE PLAY";
+      centerBorder = "#f59e0b";
+      centerLED = "#ffaa00";
+      rightTop = "🏆 PINBALL";
+      rightSub = "CHAMPION";
+      rightBorder = "#ff0077";
+    }
+
+    // 1) 좌측 윙 박스
     ctx.fillStyle = "#080c1f";
-    ctx.strokeStyle = "#00f0ff";
+    ctx.strokeStyle = leftBorder;
     ctx.lineWidth = 2;
-    ctx.shadowColor = "#00f0ff";
+    ctx.shadowColor = leftBorder;
     ctx.shadowBlur = 8;
     ctx.strokeRect(6, 12, wingW, wingH);
     ctx.fillRect(6, 12, wingW, wingH);
 
-    ctx.fillStyle = "#ffeb3b";
-    ctx.font = "900 9.5px sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 9px sans-serif";
     ctx.textAlign = "center";
-    ctx.shadowColor = "#ffeb3b";
+    ctx.shadowColor = leftBorder;
     ctx.shadowBlur = 6;
-    ctx.fillText("🚀 SPACE", 6 + wingW / 2, 28);
-    ctx.fillStyle = "#00f0ff";
-    ctx.fillText("MISSION", 6 + wingW / 2, 44);
+    ctx.fillText(leftTop, 6 + wingW / 2, 28);
+    ctx.fillStyle = leftBorder;
+    ctx.fillText(leftSub, 6 + wingW / 2, 44);
 
-    // 2) 중앙: 골드/오렌지빛 대형 디지털 전광판
+    // 2) 중앙: 골드/네온 대형 디지털 전광판
     const dmdX = 108;
     const dmdY = 8;
     const dmdW = 164;
     const dmdH = 54;
 
     ctx.fillStyle = "#060402";
-    ctx.strokeStyle = "#f59e0b";
+    ctx.strokeStyle = centerBorder;
     ctx.lineWidth = 2.5;
-    ctx.shadowColor = "#f59e0b";
+    ctx.shadowColor = centerBorder;
     ctx.shadowBlur = 12;
     ctx.strokeRect(dmdX, dmdY, dmdW, dmdH);
     ctx.fillRect(dmdX, dmdY, dmdW, dmdH);
 
-    // 골드빛 도트 LED 점수
-    ctx.fillStyle = "#ffaa00";
-    ctx.shadowColor = "#ff7700";
+    // 도트 LED 점수
+    ctx.fillStyle = centerLED;
+    ctx.shadowColor = centerBorder;
     ctx.shadowBlur = 10;
     ctx.font = "900 17px monospace";
     ctx.textAlign = "center";
     const scoreStr = gameState.score.toLocaleString();
     ctx.fillText(scoreStr, dmdX + dmdW / 2, dmdY + 24);
 
-    // 하단 라벨 (BALL / FREE PLAY)
-    ctx.fillStyle = "#ff5500";
+    // 하단 라벨 (BALL & 서브타이틀)
+    ctx.fillStyle = "#ffffff";
     ctx.font = "800 8.5px monospace";
     ctx.shadowBlur = 4;
-    const ballText = `BALL ${Math.max(1, 4 - gameState.ballsLeft)}   FREE PLAY`;
+    const ballText = `BALL ${Math.max(1, 4 - gameState.ballsLeft)}  ${centerTitle}`;
     ctx.fillText(ballText, dmdX + dmdW / 2, dmdY + 44);
 
-    // 3) 우측 윙: PINBALL CHAMPION 네온 박스
+    // 3) 우측 윙 박스
     const rightWingX = V_WIDTH - wingW - 6;
     ctx.fillStyle = "#080c1f";
-    ctx.strokeStyle = "#f59e0b";
+    ctx.strokeStyle = rightBorder;
     ctx.lineWidth = 2;
-    ctx.shadowColor = "#ffeb3b";
+    ctx.shadowColor = rightBorder;
     ctx.shadowBlur = 8;
     ctx.strokeRect(rightWingX, 12, wingW, wingH);
     ctx.fillRect(rightWingX, 12, wingW, wingH);
 
-    ctx.fillStyle = "#ffeb3b";
-    ctx.font = "900 9.5px sans-serif";
+    ctx.fillStyle = "#ffffff";
+    ctx.font = "900 9px sans-serif";
     ctx.textAlign = "center";
-    ctx.shadowColor = "#ffeb3b";
+    ctx.shadowColor = rightBorder;
     ctx.shadowBlur = 6;
-    ctx.fillText("🏆 PINBALL", rightWingX + wingW / 2, 28);
-    ctx.fillStyle = "#ff0077";
-    ctx.fillText("CHAMPION", rightWingX + wingW / 2, 44);
+    ctx.fillText(rightTop, rightWingX + wingW / 2, 28);
+    ctx.fillStyle = rightBorder;
+    ctx.fillText(rightSub, rightWingX + wingW / 2, 44);
 
     ctx.restore();
   }

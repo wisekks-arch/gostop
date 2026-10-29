@@ -54,23 +54,54 @@ const AudioManager = (() => {
   }
 
   // ============================================================
-  // 🎵 신나는 라스베가스 아케이드 BGM 엔진 (Web Audio API Synthesizer)
-  // 125 BPM 펑키 베이스라인 + 디스코 킥/스네어 + 네온 신스 아르페지오 루프
+  // 🎵 3대 명작 핀볼 머신별 신스 BGM 엔진 (Web Audio API Synthesizer)
+  // 1) AVENGERS: 영웅적이고 웅장한 히어로 팡파레 & 펀치 베이스
+  // 2) PIRATE: 경쾌하고 박진감 넘치는 해적선 대포 칩튠 비트
+  // 3) GUARDIANS: 7080 레트로 디스코 펑키 팝 신스 아르페지오
   // ============================================================
-  const BGM_BPM = 125;
-  const STEP_TIME_MS = (60 / BGM_BPM / 4) * 1000; // 16분음표 단위 (~120ms)
+  let currentThemeKey = "AVENGERS";
+  const BGM_BPM = 126;
+  const STEP_TIME_MS = (60 / BGM_BPM / 4) * 1000; // 16분음표 단위 (~119ms)
 
-  // 16비트 베이스라인 주파수 (E 마이너 펑키 펜타토닉)
-  const BASS_LINE = [
-    82.41, 0, 82.41, 0, 98.0, 0, 110.0, 123.47,
-    82.41, 0, 146.83, 0, 123.47, 110.0, 98.0, 0
-  ];
+  // 테마별 베이스라인
+  const THEME_BASS = {
+    AVENGERS: [
+      110.0, 0, 110.0, 110.0, 130.81, 0, 146.83, 0,
+      110.0, 0, 110.0, 164.81, 146.83, 130.81, 110.0, 0
+    ],
+    PIRATE: [
+      146.83, 0, 146.83, 174.61, 220.0, 0, 196.0, 174.61,
+      146.83, 0, 164.81, 146.83, 130.81, 0, 146.83, 0
+    ],
+    GUARDIANS: [
+      82.41, 0, 82.41, 0, 98.0, 0, 110.0, 123.47,
+      82.41, 0, 146.83, 0, 123.47, 110.0, 98.0, 0
+    ],
+    SPACE: [
+      82.41, 0, 82.41, 0, 98.0, 0, 110.0, 123.47,
+      82.41, 0, 146.83, 0, 123.47, 110.0, 98.0, 0
+    ]
+  };
 
-  // 16비트 아르페지오 리드 멜로디 주파수
-  const ARPEGGIO_LINE = [
-    329.63, 392.0, 493.88, 587.33, 659.25, 493.88, 392.0, 493.88,
-    293.66, 369.99, 440.0, 587.33, 440.0, 369.99, 329.63, 0
-  ];
+  // 테마별 리드 멜로디
+  const THEME_LEAD = {
+    AVENGERS: [
+      440.0, 0, 440.0, 523.25, 659.25, 0, 587.33, 523.25,
+      440.0, 0, 659.25, 783.99, 659.25, 0, 587.33, 0
+    ],
+    PIRATE: [
+      587.33, 659.25, 698.46, 587.33, 880.0, 0, 783.99, 698.46,
+      587.33, 0, 659.25, 698.46, 587.33, 523.25, 587.33, 0
+    ],
+    GUARDIANS: [
+      329.63, 392.0, 493.88, 587.33, 659.25, 493.88, 392.0, 493.88,
+      293.66, 369.99, 440.0, 587.33, 440.0, 369.99, 329.63, 0
+    ],
+    SPACE: [
+      329.63, 392.0, 493.88, 587.33, 659.25, 493.88, 392.0, 493.88,
+      293.66, 369.99, 440.0, 587.33, 440.0, 369.99, 329.63, 0
+    ]
+  };
 
   function playSynthKick(t) {
     if (!ctx) return;
@@ -147,7 +178,7 @@ const AudioManager = (() => {
     const t = ctx.currentTime;
     const step = bgmStep % 16;
 
-    // 1. 4온더플로어 킥 드럼 (0, 4, 8, 12박)
+    // 1. 킥 드럼 (0, 4, 8, 12박)
     if (step % 4 === 0) {
       playSynthKick(t);
     }
@@ -157,14 +188,16 @@ const AudioManager = (() => {
       playSynthSnare(t);
     }
 
-    // 3. 펑키 베이스라인
-    const bassFreq = BASS_LINE[step];
+    // 3. 머신별 전용 베이스라인
+    const bassArr = THEME_BASS[currentThemeKey] || THEME_BASS.AVENGERS;
+    const bassFreq = bassArr[step];
     if (bassFreq > 0) {
       playSynthBassNote(t, bassFreq);
     }
 
-    // 4. 네온 신스 아르페지오 리드
-    const arpFreq = ARPEGGIO_LINE[step];
+    // 4. 머신별 전용 리드 멜로디
+    const leadArr = THEME_LEAD[currentThemeKey] || THEME_LEAD.AVENGERS;
+    const arpFreq = leadArr[step];
     if (arpFreq > 0) {
       playSynthArpNote(t, arpFreq);
     }
@@ -172,7 +205,12 @@ const AudioManager = (() => {
     bgmStep++;
   }
 
-  function startVegasBGM() {
+  function setBgmTheme(themeKey) {
+    currentThemeKey = THEME_BASS[themeKey] ? themeKey : "AVENGERS";
+  }
+
+  function startVegasBGM(themeKey = null) {
+    if (themeKey) setBgmTheme(themeKey);
     if (bgmIntervalId) clearInterval(bgmIntervalId);
     isBgmPlaying = true;
     bgmStep = 0;
@@ -487,6 +525,7 @@ const AudioManager = (() => {
     initAudio,
     startVegasBGM,
     stopVegasBGM,
+    setBgmTheme,
     playFlipper,
     playBumper,
     playSlingshot,

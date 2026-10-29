@@ -13,8 +13,8 @@ const GameEngine = (() => {
     gold: 1500,
     diamonds: 50,
     highScore: 0,
-    unlockedThemes: ["CLASSIC", "SPACE"],
-    currentTheme: "CLASSIC",
+    unlockedThemes: ["AVENGERS", "PIRATE", "GUARDIANS", "CLASSIC"],
+    currentTheme: "AVENGERS",
     currentMode: "CLASSIC", // CLASSIC, STAGE, ENDLESS
     currentStage: 1,
     upgrades: {
@@ -137,7 +137,28 @@ const GameEngine = (() => {
     SkillEngine.resetSkills();
     spawnBallInPlunger();
 
+    if (typeof AudioManager !== "undefined") {
+      AudioManager.setBgmTheme(theme.bgImageKey || selectedThemeId);
+    }
+
     return gameState;
+  }
+
+  // 테마/머신 즉시 전환
+  function switchTheme(themeId) {
+    const theme = WorldThemes.getTheme(themeId);
+    if (!theme) return null;
+
+    profile.currentTheme = themeId;
+    saveProfile();
+
+    if (gameState) {
+      gameState.theme = theme;
+      if (typeof AudioManager !== "undefined") {
+        AudioManager.setBgmTheme(theme.bgImageKey || themeId);
+      }
+    }
+    return theme;
   }
 
   // 발사대에 새 볼 준비
@@ -504,6 +525,7 @@ const GameEngine = (() => {
 
   return {
     startGame,
+    switchTheme,
     update,
     setPlungerPull,
     releasePlunger,
