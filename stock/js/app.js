@@ -806,12 +806,12 @@ document.addEventListener("DOMContentLoaded", () => {
               const totalVal = item.qty * item.curPrice;
               return `
                 <tr>
-                  <td><strong>${item.code}</strong></td>
-                  <td>${item.name}</td>
-                  <td>${item.qty.toLocaleString()}주</td>
-                  <td>${item.avgPrice.toLocaleString()}원</td>
-                  <td><strong style="color: var(--accent-blue);">${item.curPrice.toLocaleString()}원</strong></td>
-                  <td>${totalVal.toLocaleString()}원</td>
+                  <td class="text-center"><strong>${item.code}</strong></td>
+                  <td class="text-left"><strong>${item.name}</strong></td>
+                  <td class="text-right">${item.qty.toLocaleString()}주</td>
+                  <td class="text-right">${item.avgPrice.toLocaleString()}원</td>
+                  <td class="text-right"><strong style="color: var(--accent-blue);">${item.curPrice.toLocaleString()}원</strong></td>
+                  <td class="text-right"><strong>${totalVal.toLocaleString()}원</strong></td>
                 </tr>
               `;
             }).join("");
@@ -1217,16 +1217,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         return `
           <tr>
-            <td><strong>${item.name}</strong> <span style="font-size: 0.7rem; color: var(--text-muted);">${item.code}</span></td>
-            <td>${item.currentPrice.toLocaleString()}원</td>
-            <td>${item.currentQty}주 (${item.currentWeight}%)</td>
-            <td><strong>${item.targetWeight}%</strong></td>
-            <td>
+            <td class="text-left"><strong>${item.name}</strong> <span style="font-size: 0.7rem; color: var(--text-muted);">${item.code}</span></td>
+            <td class="text-right">${item.currentPrice.toLocaleString()}원</td>
+            <td class="text-right">${item.currentQty}주 (${item.currentWeight}%)</td>
+            <td class="text-right"><strong>${item.targetWeight}%</strong></td>
+            <td class="text-right">
               <span class="drift-badge ${badgeClass}">
                 ${item.driftRate > 0 ? '+' : ''}${item.driftRate}%
               </span>
             </td>
-            <td style="font-weight: 700;">${actionText}</td>
+            <td class="text-center" style="font-weight: 700;">${actionText}</td>
           </tr>
         `;
       }).join("");
@@ -1274,15 +1274,15 @@ document.addEventListener("DOMContentLoaded", () => {
 
           return `
             <tr>
-              <td><strong>${h.name}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">${h.code}</span></td>
-              <td>${h.qty.toLocaleString()}주</td>
-              <td>${h.avgPrice.toLocaleString()}원</td>
-              <td>${curPrice.toLocaleString()}원</td>
-              <td><strong>${evalAmt.toLocaleString()}원</strong></td>
-              <td style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight:700;">
+              <td class="text-left"><strong>${h.name}</strong> <span style="font-size:0.75rem; color:var(--text-muted);">${h.code}</span></td>
+              <td class="text-right">${h.qty.toLocaleString()}주</td>
+              <td class="text-right">${h.avgPrice.toLocaleString()}원</td>
+              <td class="text-right">${curPrice.toLocaleString()}원</td>
+              <td class="text-right"><strong>${evalAmt.toLocaleString()}원</strong></td>
+              <td class="text-right" style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight:700;">
                 ${sign}${pnl.toLocaleString()}원
               </td>
-              <td style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight:700;">
+              <td class="text-right" style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight:700;">
                 ${sign}${rate}%
               </td>
             </tr>
@@ -1320,12 +1320,12 @@ document.addEventListener("DOMContentLoaded", () => {
       const isBuy = t.type === "BUY";
       return `
         <tr>
-          <td><span style="font-size:0.75rem; color:var(--text-muted);">${t.filledAt ? t.filledAt.replace('T', ' ').slice(0, 16) : '-'}</span></td>
-          <td><strong>${t.name}</strong></td>
-          <td><span style="color: ${isBuy ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight: 700;">${isBuy ? '매수' : '매도'}</span></td>
-          <td>${t.filledPrice.toLocaleString()}원</td>
-          <td>${t.qty}주</td>
-          <td>
+          <td class="text-center"><span style="font-size:0.75rem; color:var(--text-muted);">${t.filledAt ? t.filledAt.replace('T', ' ').slice(0, 16) : '-'}</span></td>
+          <td class="text-left"><strong>${t.name}</strong></td>
+          <td class="text-center"><span style="color: ${isBuy ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight: 700;">${isBuy ? '매수' : '매도'}</span></td>
+          <td class="text-right">${t.filledPrice.toLocaleString()}원</td>
+          <td class="text-right">${t.qty}주</td>
+          <td class="text-center">
             <input type="text" class="journal-note-input" data-order-id="${t.orderId}" value="${note}" placeholder="매매 사유 메모 작성..." style="width: 100%; background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.3rem 0.5rem; border-radius: 4px; font-size: 0.8rem;">
           </td>
         </tr>
@@ -1393,18 +1393,18 @@ document.addEventListener("DOMContentLoaded", () => {
 
           return `
             <tr>
-              <td><strong>${h.name}</strong> <span style="font-size: 0.72rem; color: var(--text-muted);">${h.code}</span></td>
-              <td>${h.qty.toLocaleString()}주</td>
-              <td>${h.avgPrice.toLocaleString()}원</td>
-              <td><strong style="color: var(--accent-blue);">${curPrice.toLocaleString()}원</strong></td>
-              <td><strong>${evalAmt.toLocaleString()}원</strong></td>
-              <td style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight: 700;">
+              <td class="text-left"><strong>${h.name}</strong> <span style="font-size: 0.72rem; color: var(--text-muted);">${h.code}</span></td>
+              <td class="text-right">${h.qty.toLocaleString()}주</td>
+              <td class="text-right">${h.avgPrice.toLocaleString()}원</td>
+              <td class="text-right"><strong style="color: var(--accent-blue);">${curPrice.toLocaleString()}원</strong></td>
+              <td class="text-right"><strong>${evalAmt.toLocaleString()}원</strong></td>
+              <td class="text-right" style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight: 700;">
                 ${sign}${pnl.toLocaleString()}원
               </td>
-              <td style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight: 700;">
+              <td class="text-right" style="color: ${pnl >= 0 ? 'var(--up-red)' : 'var(--down-blue)'}; font-weight: 700;">
                 ${sign}${rate}%
               </td>
-              <td>
+              <td class="text-center">
                 <button class="btn-home-rebalance-link" data-code="${h.code}" style="background: rgba(163, 113, 247, 0.15); border: 1px solid var(--accent-purple); color: var(--accent-purple); padding: 0.25rem 0.6rem; border-radius: 4px; font-size: 0.75rem; font-weight: 700; cursor: pointer;">
                   ⚖️ 리밸런싱
                 </button>

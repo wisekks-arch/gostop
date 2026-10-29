@@ -1027,6 +1027,11 @@ body.light-theme .rebalance-drift-table td {
 /* ============================================================
    공통 테이블, 모달 및 알림 토스트 (UI Components)
    ============================================================ */
+/* 항목별 정렬 유틸리티 (종목명: 좌측, 기타 수치: 우측, 처방/상태: 중앙) */
+.text-left, th.text-left, td.text-left { text-align: left !important; }
+.text-right, th.text-right, td.text-right { text-align: right !important; }
+.text-center, th.text-center, td.text-center { text-align: center !important; }
+
 .data-table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
 .data-table th {
   background-color: var(--bg-secondary);
