@@ -114,6 +114,32 @@ const ChartManager = (() => {
       render();
     });
 
+    // 모바일 터치 이벤트 바인딩 (갤럭시 등 스마트폰 환경 캔들 터치 지원)
+    canvas.addEventListener("touchstart", (e) => {
+      if (e.touches && e.touches[0]) {
+        const rect = canvas.getBoundingClientRect();
+        mousePos.x = e.touches[0].clientX - rect.left;
+        mousePos.y = e.touches[0].clientY - rect.top;
+        isHovered = true;
+        render();
+      }
+    }, { passive: true });
+
+    canvas.addEventListener("touchmove", (e) => {
+      if (e.touches && e.touches[0]) {
+        const rect = canvas.getBoundingClientRect();
+        mousePos.x = e.touches[0].clientX - rect.left;
+        mousePos.y = e.touches[0].clientY - rect.top;
+        isHovered = true;
+        render();
+      }
+    }, { passive: true });
+
+    canvas.addEventListener("touchend", () => {
+      isHovered = false;
+      render();
+    }, { passive: true });
+
     // 캔버스 클릭 작도 이벤트
     canvas.addEventListener("click", (e) => {
       handleCanvasClick(e);
