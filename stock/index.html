@@ -445,7 +445,13 @@
         <div id="cardModeOpt2" class="rebalance-card opt2">
           <span class="card-badge">옵션 2</span>
           <h3>🌐 전체 보유 종목 포트폴리오 리밸런싱</h3>
-          <p>공격형/균형형/방어형 자산 배분 모델 대비 비중 괴리율을 자동 산출하고, 원클릭으로 목표 비중을 일괄 맞춥니다.</p>
+          <p>공격형/균형형/방어형 자산 배분 모델 대비 비중 괴리율을 자동 산출하고, 선택된 종목만 원클릭 일괄 조정합니다.</p>
+        </div>
+
+        <div id="cardModeOpt3" class="rebalance-card opt3">
+          <span class="card-badge">옵션 3</span>
+          <h3>⚙️ 기술적 지표 & 전략 파라미터 설정</h3>
+          <p>RSI 과매수/과매도, 이동평균선 주기, 목표 익절률, 손절 제한선, 최대 편중도 임계값을 직접 설정합니다.</p>
         </div>
       </div>
 
@@ -483,6 +489,9 @@
           <table class="rebalance-drift-table">
             <thead>
               <tr>
+                <th style="width: 45px;" class="text-center">
+                  <input type="checkbox" id="chkRebalanceAll" checked title="전체 선택 / 해제">
+                </th>
                 <th class="text-left">종목명 / 코드</th>
                 <th class="text-right">현재가</th>
                 <th class="text-right">현재 비중 (수량)</th>
@@ -493,6 +502,177 @@
             </thead>
             <tbody id="rebalanceDriftTableBody"></tbody>
           </table>
+
+          <!-- [신규 기능] 옵션 2 하단: 내가 보유한 종목 선택 및 선택 종목만 일괄 리밸런싱 실행 패널 -->
+          <div class="card-box" style="margin-top: 1.25rem; padding: 1.1rem; border: 1px solid var(--accent-purple); background: rgba(163, 113, 247, 0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+              <div>
+                <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-primary); display: flex; align-items: center; gap: 0.5rem;">
+                  <span>📋 보유 종목 선택 리밸런싱</span>
+                  <span id="rebalanceSelectedSummaryBadge" style="font-size: 0.75rem; background: var(--accent-purple); color: #fff; padding: 0.2rem 0.55rem; border-radius: 12px; font-weight: 700;">
+                    0개 종목 선택됨
+                  </span>
+                </div>
+                <div style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.25rem;">
+                  체크된 종목들만 대상으로 리밸런싱이 실행되며, 체크 해제된 종목은 기존 비중을 그대로 유지합니다.
+                </div>
+              </div>
+              <div style="display: flex; gap: 0.5rem; align-items: center;">
+                <button id="btnToggleAllRebalanceChecks" type="button"
+                  style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.45rem 0.8rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+                  ☑️ 전체 선택/해제
+                </button>
+                <button id="btnExecuteSelectedRebalance" class="btn-execute-all" style="padding: 0.5rem 1.25rem; font-size: 0.9rem;">
+                  ⚡ 선택된 종목만 일괄 리밸런싱 실행
+                </button>
+              </div>
+            </div>
+            <div id="rebalanceHoldingsCardList" class="rebalance-holdings-grid" style="margin-top: 0.85rem;"></div>
+          </div>
+        </div>
+
+        <!-- [신규 기능] 옵션 3: 기술적 지표 & 전략 파라미터 조정 설정 뷰 -->
+        <div id="viewRebalanceOpt3" class="rebalance-config-view" style="display: none;">
+          <div class="card-box" style="padding: 1.25rem;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1.25rem;">
+              <div>
+                <h3 style="font-size: 1.15rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+                  ⚙️ 리밸런싱 기술적 지표 & 매매 전략 파라미터 설정
+                </h3>
+                <p style="font-size: 0.8rem; color: var(--text-secondary); margin-top: 0.2rem;">
+                  원하시는 RSI 과열/침체선, 이동평균선 기준, 목표 익절률 및 손절 제한선을 설정하시면 개별 종목 처방과 포트폴리오 리밸런싱에 즉시 실시간 반영됩니다.
+                </p>
+              </div>
+              <div style="display: flex; gap: 0.5rem;">
+                <button id="btnResetRebalanceConfig" type="button"
+                  style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-secondary); padding: 0.45rem 0.85rem; border-radius: 6px; font-size: 0.8rem; font-weight: 700; cursor: pointer;">
+                  🔄 기본값 복원
+                </button>
+                <button id="btnSaveRebalanceConfig" type="button" class="btn-execute-all"
+                  style="padding: 0.45rem 1.2rem; font-size: 0.85rem;">
+                  💾 설정 저장 & 즉시 적용
+                </button>
+              </div>
+            </div>
+
+            <div class="config-grid">
+              <!-- 섹션 1: RSI 기술적 지표 -->
+              <div class="config-card">
+                <div class="config-card-title">📈 RSI 기술적 지표 설정</div>
+                <div class="config-field">
+                  <label for="cfgRsiOverbought">과매수 (익절 검토) 기준선 (pt):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgRsiOverbought" min="50" max="90" step="1" value="70">
+                    <span>pt 이상</span>
+                  </div>
+                  <div class="field-desc">RSI가 이 값 이상이면 과열 구간으로 판단하여 분할 차익 실현 처방을 제시합니다.</div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgRsiOversold">과매도 (추가매수 검토) 기준선 (pt):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgRsiOversold" min="15" max="50" step="1" value="40">
+                    <span>pt 이하</span>
+                  </div>
+                  <div class="field-desc">RSI가 이 값 이하이면 침체 구간으로 판단하여 저가 분할 매수 처방을 제시합니다.</div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgRsiPeriod">RSI 계산 주기 (영업일):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgRsiPeriod" min="5" max="30" step="1" value="14">
+                    <span>일</span>
+                  </div>
+                  <div class="field-desc">상대강도지수 산출 시 적용할 기준 캔들 기간입니다. (기본 14일)</div>
+                </div>
+              </div>
+
+              <!-- 섹션 2: 이동평균선(MA) 설정 -->
+              <div class="config-card">
+                <div class="config-card-title">📉 이동평균선 (MA) 주기 설정</div>
+                <div class="config-field">
+                  <label for="cfgMaShort">단기 이동평균선:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgMaShort" min="3" max="10" step="1" value="5">
+                    <span>일선 (단기 추세)</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgMaMid">중기 이동평균선:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgMaMid" min="15" max="30" step="1" value="20">
+                    <span>일선 (생명선 / 중심선)</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgMaLong">장기 이동평균선:</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgMaLong" min="40" max="120" step="5" value="60">
+                    <span>일선 (중장기 추세선)</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 섹션 3: 수익률 기반 매매 규칙 -->
+              <div class="config-card">
+                <div class="config-card-title">🎯 수익률 기반 익절 & 손절 규칙</div>
+                <div class="config-field">
+                  <label for="cfgProfitTarget">목표 익절 수익률 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgProfitTarget" min="3" max="100" step="0.5" value="15.0">
+                    <span>% 도달 시</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgProfitSellRatio">분할 차익 실현 비율 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgProfitSellRatio" min="10" max="100" step="5" value="30">
+                    <span>% 분할 매도</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgStopLoss">리스크 방어 손절 제한선 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgStopLoss" min="-50" max="-2" step="0.5" value="-8.0">
+                    <span>% 도달 시</span>
+                  </div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgStopLossRatio">손절 비중 축소 비율 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgStopLossRatio" min="10" max="100" step="5" value="50">
+                    <span>% 손절 매도</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- 섹션 4: 포트폴리오 편중도 및 현금 비중 -->
+              <div class="config-card">
+                <div class="config-card-title">⚖️ 포트폴리오 편중도 & 현금 버퍼</div>
+                <div class="config-field">
+                  <label for="cfgMaxWeight">단일 종목 최대 허용 비중 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgMaxWeight" min="10" max="60" step="1" value="30.0">
+                    <span>% 초과 시 쏠림 경고</span>
+                  </div>
+                  <div class="field-desc">특정 단일 종목이 이 비중을 초과하면 리밸런싱 분산 경고를 발동합니다.</div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgCashBuffer">목표 현금 유동성 비중 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgCashBuffer" min="0" max="50" step="1" value="10">
+                    <span>% 현금 확보</span>
+                  </div>
+                  <div class="field-desc">전체 포트폴리오 리밸런싱 시 시장 급변에 대비해 확보할 안전 현금 비중입니다.</div>
+                </div>
+                <div class="config-field">
+                  <label for="cfgScaleInDip">추가 매수(눌림목) 진입 하락폭 (%):</label>
+                  <div class="input-with-unit">
+                    <input type="number" id="cfgScaleInDip" min="-30" max="-1" step="0.5" value="-5.0">
+                    <span>% 하락 시 분할 매수</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </section>

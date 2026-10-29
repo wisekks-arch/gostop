@@ -5,6 +5,68 @@
  */
 
 const RebalancingEngine = (() => {
+  const CONFIG_STORAGE_KEY = "stockcraft_rebalance_config_v1";
+
+  // 기본 기술적 지표 & 전략 파라미터 표준 프리셋
+  const DEFAULT_CONFIG = {
+    rsiOverbought: 70,     // 과매수 (익절 검토) 기준 (pt)
+    rsiOversold: 40,       // 과매도 (추가매수 검토) 기준 (pt)
+    rsiPeriod: 14,         // RSI 계산 기간 (일)
+    maShort: 5,            // 단기 이동평균선 (일)
+    maMid: 20,             // 중기 이동평균선 (일)
+    maLong: 60,            // 장기 이동평균선 (일)
+    profitTarget: 15.0,    // 목표 익절 수익률 (%)
+    profitSellRatio: 30,   // 분할 익절 매도 비율 (%)
+    stopLoss: -8.0,        // 손절 제한선 (%)
+    stopLossRatio: 50,     // 손절 매도 비율 (%)
+    scaleInDip: -5.0,      // 추가 매수 진입 하락폭 (%)
+    maxWeight: 30.0,       // 단일 종목 최대 편중도 제한 (%)
+    cashBuffer: 10         // 목표 현금 유동성 비중 (%)
+  };
+
+  let activeConfig = { ...DEFAULT_CONFIG };
+
+  function loadConfig() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const saved = localStorage.getItem(CONFIG_STORAGE_KEY);
+        if (saved) {
+          activeConfig = { ...DEFAULT_CONFIG, ...JSON.parse(saved) };
+        }
+      }
+    } catch (e) {
+      console.warn("리밸런싱 설정 로드 실패:", e);
+    }
+  }
+
+  function saveConfig(newConfig) {
+    activeConfig = { ...activeConfig, ...newConfig };
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem(CONFIG_STORAGE_KEY, JSON.stringify(activeConfig));
+      }
+    } catch (e) {
+      console.error("리밸런싱 설정 저장 실패:", e);
+    }
+    return activeConfig;
+  }
+
+  function resetConfig() {
+    activeConfig = { ...DEFAULT_CONFIG };
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(CONFIG_STORAGE_KEY);
+      }
+    } catch (e) {}
+    return activeConfig;
+  }
+
+  function getConfig() {
+    return { ...activeConfig };
+  }
+
+  loadConfig();
+
   // 기본 자산 배분 모델 프리셋
   const ALLOCATION_PRESETS = {
     AGGRESSIVE: {
@@ -71,17 +133,17 @@ const RebalancingEngine = (() => {
     let outlookDesc = "";
     let actionRecommendation = {};
 
-    // 기술적 지표 & 수익률 기반 전망 판정 로직
-    if (rsi >= 70) {
+    // 기술적 지표 & 수익률 기반 전망 판정 로직 (사용자 설정 지표 반영)
+    if (rsi >= activeConfig.rsiOverbought) {
       signal = "TAKE_PROFIT";
-      signalText = "부분 익절 권고 (과매수 구간)";
+      signalText = `부분 익절 권고 (RSI ${activeConfig.rsiOverbought} 이상 과매수 구간)`;
       outlookScore = 45;
-      outlookDesc = `현재 RSI(${rsi})가 70을 초과하여 단기 과열 구간에 진입했습니다. 차익 실현 매물이 출회될 가능성이 높습니다.`;
-    } else if (rsi <= 40) {
+      outlookDesc = `현재 RSI(${rsi})가 설정된 과매수 기준선(${activeConfig.rsiOverbought} pt)을 초과하여 단기 과열 구간에 진입했습니다. 차익 실현 매물이 출회될 가능성이 높습니다.`;
+    } else if (rsi <= activeConfig.rsiOversold) {
       signal = "SCALE_IN";
-      signalText = "분할 매수 권고 (과매도 저평가)";
+      signalText = `분할 매수 권고 (RSI ${activeConfig.rsiOversold} 이하 과매도 저평가)`;
       outlookScore = 80;
-      outlookDesc = `RSI(${rsi}) 기준 과매도 국면으로, 기술적 반등 및 저가 매수세 유입이 기대되는 구간입니다.`;
+      outlookDesc = `RSI(${rsi}) 기준 설정된 과매도 기준선(${activeConfig.rsiOversold} pt) 이하 국면으로, 기술적 반등 및 저가 매수세 유입이 기대되는 구간입니다.`;
     } else {
       signal = "HOLD";
       signalText = "보유 및 추세 관망";
@@ -89,41 +151,43 @@ const RebalancingEngine = (() => {
       outlookDesc = `현재 견조한 추세를 유지하고 있으며 추가 모멘텀 형성을 대기하는 중립 구간입니다.`;
     }
 
-    // 2. 단일 종목 포트폴리오 편중(쏠림도) 진단
-    const isOverweight = weightInPortfolio > 30.0;
+    // 2. 단일 종목 포트폴리오 편중(쏠림도) 진단 (사용자 설정 기준 반영)
+    const isOverweight = weightInPortfolio > activeConfig.maxWeight;
     let weightWarning = null;
     if (isOverweight) {
-      weightWarning = `⚠️ 총 자산의 ${weightInPortfolio}%가 해당 종목에 집중되어 있어 포트폴리오 변동성 위험이 높습니다. 비중을 20~25% 수준으로 분산하는 것을 권장합니다.`;
+      weightWarning = `⚠️ 총 자산의 ${weightInPortfolio}%가 해당 종목에 집중되어 있어 포트폴리오 변동성 위험이 높습니다. 설정된 최대 한도(${activeConfig.maxWeight}%) 이하로 분산하는 것을 권장합니다.`;
     }
 
-    // 3. 구체적인 실행 처방 (Actionable Guide)
+    // 3. 구체적인 실행 처방 (사용자 설정 매매 규칙 반영)
     if (qty > 0) {
-      if (profitRate >= 15.0 || signal === "TAKE_PROFIT" || isOverweight) {
+      if (profitRate >= activeConfig.profitTarget || signal === "TAKE_PROFIT" || isOverweight) {
         // 비중 축소 / 분할 익절 처방
-        const targetSellQty = Math.max(1, Math.round(qty * 0.3)); // 30% 분할 매도
+        const sellRatio = activeConfig.profitSellRatio / 100;
+        const targetSellQty = Math.max(1, Math.round(qty * sellRatio));
         const expectedCash = targetSellQty * currentPrice;
         const expectedRealizedProfit = Math.round(targetSellQty * (currentPrice - avgPrice));
 
         actionRecommendation = {
           type: "SELL",
-          actionName: "분할 차익 실현",
+          actionName: `분할 차익 실현 (${activeConfig.profitSellRatio}%)`,
           recommendedQty: targetSellQty,
           targetPrice: currentPrice,
           expectedCash,
           expectedProfit: expectedRealizedProfit,
-          guideMessage: `수익 보존 및 리스크 관리를 위해 보유 수량의 약 30%인 ${targetSellQty}주 매도를 권장합니다. (예상 확정 수익: +${expectedRealizedProfit.toLocaleString()}원)`
+          guideMessage: `수익 보존 및 리스크 관리를 위해 보유 수량의 약 ${activeConfig.profitSellRatio}%인 ${targetSellQty}주 매도를 권장합니다. (목표수익률: +${activeConfig.profitTarget}%, 예상 확정 수익: +${expectedRealizedProfit.toLocaleString()}원)`
         };
-      } else if (profitRate <= -8.0) {
+      } else if (profitRate <= activeConfig.stopLoss) {
         // 손실 방어 / 손절 처방
-        const cutQty = Math.max(1, Math.round(qty * 0.5));
+        const cutRatio = activeConfig.stopLossRatio / 100;
+        const cutQty = Math.max(1, Math.round(qty * cutRatio));
         actionRecommendation = {
           type: "SELL",
-          actionName: "리스크 방어 손절/비중 축소",
+          actionName: `리스크 방어 손절 (${activeConfig.stopLossRatio}%)`,
           recommendedQty: cutQty,
           targetPrice: currentPrice,
           expectedCash: cutQty * currentPrice,
           expectedProfit: Math.round(cutQty * (currentPrice - avgPrice)),
-          guideMessage: `지지선 이탈 위험에 대비하여 리스크 관리를 위해 ${cutQty}주 비중 축소를 권고합니다.`
+          guideMessage: `설정된 손절 제한선(${activeConfig.stopLoss}%) 도달에 따라 리스크 관리를 위해 보유 수량의 ${activeConfig.stopLossRatio}%인 ${cutQty}주 비중 축소를 권고합니다.`
         };
       } else {
         // 홀딩 또는 소액 추가 매수
@@ -300,11 +364,17 @@ const RebalancingEngine = (() => {
 
   /**
    * 원클릭 일괄 리밸런싱 실행 (One-Click Batch Execution)
+   * 선택된 종목만 필터링 실행 지원 (selectedCodes)
    * 정합성 보장: 매도 주문을 먼저 체결하여 예수금을 확보한 뒤, 매수 주문을 순차 체결
    */
-  function executeBatchRebalance(rebalanceAnalysis) {
+  function executeBatchRebalance(rebalanceAnalysis, selectedCodes = null) {
     const results = [];
-    const items = rebalanceAnalysis.items;
+    let items = rebalanceAnalysis.items || [];
+
+    // [신규 기능] 선택된 종목들만 필터링하여 리밸런싱 실행
+    if (Array.isArray(selectedCodes) && selectedCodes.length > 0) {
+      items = items.filter(item => selectedCodes.includes(item.code));
+    }
 
     // 1단계: 초과 종목 매도 일괄 실행 (예수금 확보)
     items.filter(item => item.action === "SELL" && item.orderQty > 0).forEach(item => {
@@ -339,6 +409,9 @@ const RebalancingEngine = (() => {
 
   return {
     ALLOCATION_PRESETS,
+    getConfig,
+    saveConfig,
+    resetConfig,
     analyzeSingleStock,
     analyzePortfolioRebalance,
     executeBatchRebalance

@@ -10,6 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
   let currentMarketFilter = "ALL";
   let currentRebalancePreset = "BALANCED";
   let pendingExcelItems = []; // 엑셀 파싱 대기 목록
+  let selectedRebalanceCodes = new Set(); // 옵션 2 선택된 리밸런싱 종목 코드 목록
 
   function initApp() {
     // 저장된 커스텀 종목(엑셀 등)이 있을 경우 기본 종목 코드 자동 보정
@@ -1013,24 +1014,33 @@ document.addEventListener("DOMContentLoaded", () => {
     const cardOpt2 = document.getElementById("cardModeOpt2");
     const viewOpt1 = document.getElementById("viewRebalanceOpt1");
     const viewOpt2 = document.getElementById("viewRebalanceOpt2");
+    const viewOpt3 = document.getElementById("viewRebalanceOpt3");
+    const cardOpt3 = document.getElementById("cardModeOpt3");
 
-    if (cardOpt1 && cardOpt2) {
-      cardOpt1.addEventListener("click", () => {
-        cardOpt1.classList.add("active-card");
-        cardOpt2.classList.remove("active-card");
+    function switchRebalanceMode(mode) {
+      [cardOpt1, cardOpt2, cardOpt3].forEach(c => c && c.classList.remove("active-card"));
+      if (viewOpt1) viewOpt1.style.display = "none";
+      if (viewOpt2) viewOpt2.style.display = "none";
+      if (viewOpt3) viewOpt3.style.display = "none";
+
+      if (mode === "opt1") {
+        if (cardOpt1) cardOpt1.classList.add("active-card");
         if (viewOpt1) viewOpt1.style.display = "grid";
-        if (viewOpt2) viewOpt2.style.display = "none";
         renderSingleStockRebalance(currentStockCode);
-      });
-
-      cardOpt2.addEventListener("click", () => {
-        cardOpt2.classList.add("active-card");
-        cardOpt1.classList.remove("active-card");
-        if (viewOpt1) viewOpt1.style.display = "none";
+      } else if (mode === "opt2") {
+        if (cardOpt2) cardOpt2.classList.add("active-card");
         if (viewOpt2) viewOpt2.style.display = "flex";
         renderPortfolioRebalance();
-      });
+      } else if (mode === "opt3") {
+        if (cardOpt3) cardOpt3.classList.add("active-card");
+        if (viewOpt3) viewOpt3.style.display = "block";
+        loadRebalanceConfigForm();
+      }
     }
+
+    if (cardOpt1) cardOpt1.addEventListener("click", () => switchRebalanceMode("opt1"));
+    if (cardOpt2) cardOpt2.addEventListener("click", () => switchRebalanceMode("opt2"));
+    if (cardOpt3) cardOpt3.addEventListener("click", () => switchRebalanceMode("opt3"));
 
     document.querySelectorAll(".preset-chip").forEach(chip => {
       chip.addEventListener("click", () => {
@@ -1041,16 +1051,66 @@ document.addEventListener("DOMContentLoaded", () => {
       });
     });
 
-    const btnExecuteBatch = document.getElementById("btnExecuteBatchRebalance");
-    if (btnExecuteBatch) {
-      btnExecuteBatch.addEventListener("click", () => {
+    // 전체 선택/해제 토글 버튼
+    const btnToggleAll = document.getElementById("btnToggleAllRebalanceChecks");
+    if (btnToggleAll) {
+      btnToggleAll.addEventListener("click", () => {
         const analysis = RebalancingEngine.analyzePortfolioRebalance(currentRebalancePreset);
-        if (confirm(`'${analysis.presetName}' 모델에 맞춰 총 ${analysis.items.filter(i => i.action !== 'MATCH').length}개 종목의 일괄 리밸런싱을 실행하시겠습니까?`)) {
-          const execRes = RebalancingEngine.executeBatchRebalance(analysis);
-          showToast(`일괄 리밸런싱 완료! 총 ${execRes.executedCount}건의 주문이 자동 체결되었습니다.`, "toast-success");
-          updateHeaderAssets();
-          renderPortfolioRebalance();
-          renderPortfolioView();
+        const allCodes = (analysis.items || []).map(i => i.code);
+        if (selectedRebalanceCodes.size === allCodes.length) {
+          selectedRebalanceCodes.clear();
+        } else {
+          selectedRebalanceCodes = new Set(allCodes);
+        }
+        renderPortfolioRebalance();
+      });
+    }
+
+    // 선택된 종목만 일괄 리밸런싱 실행
+    const btnExecuteSelected = document.getElementById("btnExecuteSelectedRebalance");
+    const btnExecuteBatch = document.getElementById("btnExecuteBatchRebalance");
+
+    function executeSelectedRebalanceFlow() {
+      const analysis = RebalancingEngine.analyzePortfolioRebalance(currentRebalancePreset);
+      const targetCodes = Array.from(selectedRebalanceCodes);
+      if (targetCodes.length === 0) {
+        showToast("리밸런싱을 실행할 종목을 1개 이상 선택해 주세요.", "toast-error");
+        return;
+      }
+      const selectedItems = analysis.items.filter(i => targetCodes.includes(i.code) && i.action !== "MATCH");
+      if (selectedItems.length === 0) {
+        showToast("선택된 종목 중 비중 조정(매매)이 필요한 종목이 없습니다.", "toast-info");
+        return;
+      }
+
+      if (confirm(`선택하신 ${targetCodes.length}개 종목 중 비중 조정이 필요한 ${selectedItems.length}건의 리밸런싱 주문을 일괄 실행하시겠습니까?`)) {
+        const execRes = RebalancingEngine.executeBatchRebalance(analysis, targetCodes);
+        showToast(`선택 종목 리밸런싱 완료! 총 ${execRes.executedCount}건의 주문이 자동 체결되었습니다.`, "toast-success");
+        updateHeaderAssets();
+        renderPortfolioRebalance();
+        renderPortfolioView();
+      }
+    }
+
+    if (btnExecuteSelected) btnExecuteSelected.addEventListener("click", executeSelectedRebalanceFlow);
+    if (btnExecuteBatch) btnExecuteBatch.addEventListener("click", executeSelectedRebalanceFlow);
+
+    // [신규 기능] 옵션 3 설정 폼 저장 및 복원 버튼 이벤트
+    const btnSaveCfg = document.getElementById("btnSaveRebalanceConfig");
+    const btnResetCfg = document.getElementById("btnResetRebalanceConfig");
+
+    if (btnSaveCfg) {
+      btnSaveCfg.addEventListener("click", () => {
+        saveRebalanceConfigFromForm();
+      });
+    }
+
+    if (btnResetCfg) {
+      btnResetCfg.addEventListener("click", () => {
+        if (confirm("모든 리밸런싱 기술적 지표 및 매매 규칙을 표준 기본값으로 복원하시겠습니까?")) {
+          RebalancingEngine.resetConfig();
+          loadRebalanceConfigForm();
+          showToast("리밸런싱 설정이 기본값으로 복원되었습니다.", "toast-info");
         }
       });
     }
@@ -1183,28 +1243,104 @@ document.addEventListener("DOMContentLoaded", () => {
     }
   }
 
+  // ============================================================
+  // [신규 기능] 리밸런싱 옵션 3 기술적 지표 & 전략 설정 폼 제어
+  // ============================================================
+  function loadRebalanceConfigForm() {
+    const cfg = RebalancingEngine.getConfig();
+    const setVal = (id, val) => {
+      const el = document.getElementById(id);
+      if (el) el.value = val;
+    };
+    setVal("cfgRsiOverbought", cfg.rsiOverbought);
+    setVal("cfgRsiOversold", cfg.rsiOversold);
+    setVal("cfgRsiPeriod", cfg.rsiPeriod);
+    setVal("cfgMaShort", cfg.maShort);
+    setVal("cfgMaMid", cfg.maMid);
+    setVal("cfgMaLong", cfg.maLong);
+    setVal("cfgProfitTarget", cfg.profitTarget);
+    setVal("cfgProfitSellRatio", cfg.profitSellRatio);
+    setVal("cfgStopLoss", cfg.stopLoss);
+    setVal("cfgStopLossRatio", cfg.stopLossRatio);
+    setVal("cfgScaleInDip", cfg.scaleInDip);
+    setVal("cfgMaxWeight", cfg.maxWeight);
+    setVal("cfgCashBuffer", cfg.cashBuffer);
+  }
+
+  function saveRebalanceConfigFromForm() {
+    const getNum = (id, def) => {
+      const el = document.getElementById(id);
+      return el && !isNaN(parseFloat(el.value)) ? parseFloat(el.value) : def;
+    };
+
+    const newCfg = {
+      rsiOverbought: getNum("cfgRsiOverbought", 70),
+      rsiOversold: getNum("cfgRsiOversold", 40),
+      rsiPeriod: getNum("cfgRsiPeriod", 14),
+      maShort: getNum("cfgMaShort", 5),
+      maMid: getNum("cfgMaMid", 20),
+      maLong: getNum("cfgMaLong", 60),
+      profitTarget: getNum("cfgProfitTarget", 15.0),
+      profitSellRatio: getNum("cfgProfitSellRatio", 30),
+      stopLoss: getNum("cfgStopLoss", -8.0),
+      stopLossRatio: getNum("cfgStopLossRatio", 50),
+      scaleInDip: getNum("cfgScaleInDip", -5.0),
+      maxWeight: getNum("cfgMaxWeight", 30.0),
+      cashBuffer: getNum("cfgCashBuffer", 10)
+    };
+
+    RebalancingEngine.saveConfig(newCfg);
+    showToast("리밸런싱 기술적 지표 & 매매 전략 설정이 성공적으로 저장되었습니다!", "toast-success");
+  }
+
   function renderPortfolioRebalance() {
     const analysis = RebalancingEngine.analyzePortfolioRebalance(currentRebalancePreset);
     const tableBody = document.getElementById("rebalanceDriftTableBody");
     const summaryDesc = document.getElementById("rebalancePresetDesc");
+    const chkAll = document.getElementById("chkRebalanceAll");
+    const summaryBadge = document.getElementById("rebalanceSelectedSummaryBadge");
+    const cardListEl = document.getElementById("rebalanceHoldingsCardList");
 
     if (summaryDesc) {
       summaryDesc.innerHTML = `<strong>${analysis.presetName}</strong>: ${analysis.presetDesc}`;
     }
 
-    if (tableBody) {
-      if (!analysis.items || analysis.items.length === 0) {
+    if (!analysis.items || analysis.items.length === 0) {
+      if (tableBody) {
         tableBody.innerHTML = `
           <tr>
-            <td colspan="6" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
+            <td colspan="7" style="text-align: center; color: var(--text-muted); padding: 2.5rem;">
               등록된 보유 주식이 없습니다. 상단의 <strong>'📑 내 실제 주식 엑셀 업로드'</strong> 또는 <strong>'📥 직접 입력'</strong>으로 보유 주식을 등록해 보세요.
             </td>
           </tr>
         `;
-        return;
       }
+      if (cardListEl) cardListEl.innerHTML = "";
+      if (summaryBadge) summaryBadge.textContent = "0개 종목 선택됨";
+      return;
+    }
 
+    // 초기 상태: 모든 종목 기본 선택
+    if (selectedRebalanceCodes.size === 0) {
+      selectedRebalanceCodes = new Set(analysis.items.map(i => i.code));
+    }
+
+    if (chkAll) {
+      chkAll.checked = selectedRebalanceCodes.size === analysis.items.length;
+      chkAll.onchange = (e) => {
+        if (e.target.checked) {
+          selectedRebalanceCodes = new Set(analysis.items.map(i => i.code));
+        } else {
+          selectedRebalanceCodes.clear();
+        }
+        renderPortfolioRebalance();
+      };
+    }
+
+    // 1. 테이블 본문 렌더링 (체크박스 컬럼 포함)
+    if (tableBody) {
       tableBody.innerHTML = analysis.items.map(item => {
+        const isChecked = selectedRebalanceCodes.has(item.code);
         let badgeClass = "match";
         let actionText = "비중 유지";
         if (item.action === "SELL") {
@@ -1216,9 +1352,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         return `
-          <tr>
+          <tr style="${isChecked ? '' : 'opacity: 0.45;'}">
+            <td class="text-center">
+              <input type="checkbox" class="chk-rebalance-item" data-code="${item.code}" ${isChecked ? 'checked' : ''} style="cursor: pointer;">
+            </td>
             <td class="text-left"><strong>${item.name}</strong> <span style="font-size: 0.7rem; color: var(--text-muted);">${item.code}</span></td>
-            <td class="text-right">${item.currentPrice.toLocaleString()}원</td>
+            <td class="text-right">${item.price.toLocaleString()}원</td>
             <td class="text-right">${item.currentQty}주 (${item.currentWeight}%)</td>
             <td class="text-right"><strong>${item.targetWeight}%</strong></td>
             <td class="text-right">
@@ -1230,6 +1369,88 @@ document.addEventListener("DOMContentLoaded", () => {
           </tr>
         `;
       }).join("");
+
+      tableBody.querySelectorAll(".chk-rebalance-item").forEach(inp => {
+        inp.addEventListener("change", (e) => {
+          const code = inp.getAttribute("data-code");
+          if (e.target.checked) {
+            selectedRebalanceCodes.add(code);
+          } else {
+            selectedRebalanceCodes.delete(code);
+          }
+          renderPortfolioRebalance();
+        });
+      });
+    }
+
+    // 2. 하단 내가 보유한 종목 선택 카드 그리드 렌더링
+    if (cardListEl) {
+      cardListEl.innerHTML = analysis.items.map(item => {
+        const isChecked = selectedRebalanceCodes.has(item.code);
+        let actionBadgeColor = "var(--text-muted)";
+        let actionBadgeBg = "rgba(255, 255, 255, 0.05)";
+        let actionLabel = "유지";
+
+        if (item.action === "SELL") {
+          actionBadgeColor = "var(--down-blue)";
+          actionBadgeBg = "rgba(88, 166, 255, 0.15)";
+          actionLabel = `매도 ${item.orderQty}주`;
+        } else if (item.action === "BUY") {
+          actionBadgeColor = "var(--up-red)";
+          actionBadgeBg = "rgba(248, 81, 73, 0.15)";
+          actionLabel = `매수 ${item.orderQty}주`;
+        }
+
+        return `
+          <div class="rebalance-stock-card ${isChecked ? 'selected' : ''}" data-code="${item.code}">
+            <input type="checkbox" class="card-chk-item" data-code="${item.code}" ${isChecked ? 'checked' : ''} style="cursor: pointer;">
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-weight: 800; font-size: 0.85rem; text-overflow: ellipsis; overflow: hidden; white-space: nowrap;">
+                ${item.name}
+              </div>
+              <div style="font-size: 0.72rem; color: var(--text-secondary);">
+                현재 ${item.currentQty}주 (${item.currentWeight}%) → 목표 ${item.targetWeight}%
+              </div>
+            </div>
+            <span style="font-size: 0.7rem; font-weight: 800; padding: 0.2rem 0.45rem; border-radius: 4px; color: ${actionBadgeColor}; background: ${actionBadgeBg}; white-space: nowrap;">
+              ${actionLabel}
+            </span>
+          </div>
+        `;
+      }).join("");
+
+      cardListEl.querySelectorAll(".rebalance-stock-card").forEach(card => {
+        card.addEventListener("click", (e) => {
+          if (e.target.tagName === "INPUT") return;
+          const code = card.getAttribute("data-code");
+          if (selectedRebalanceCodes.has(code)) {
+            selectedRebalanceCodes.delete(code);
+          } else {
+            selectedRebalanceCodes.add(code);
+          }
+          renderPortfolioRebalance();
+        });
+      });
+
+      cardListEl.querySelectorAll(".card-chk-item").forEach(chk => {
+        chk.addEventListener("change", (e) => {
+          const code = chk.getAttribute("data-code");
+          if (e.target.checked) {
+            selectedRebalanceCodes.add(code);
+          } else {
+            selectedRebalanceCodes.delete(code);
+          }
+          renderPortfolioRebalance();
+        });
+      });
+    }
+
+    // 3. 선택 요약 뱃지 갱신
+    if (summaryBadge) {
+      const selectedItems = analysis.items.filter(i => selectedRebalanceCodes.has(i.code));
+      const sellCount = selectedItems.filter(i => i.action === "SELL").length;
+      const buyCount = selectedItems.filter(i => i.action === "BUY").length;
+      summaryBadge.textContent = `${selectedItems.length}개 종목 선택됨 (매도 ${sellCount}건, 매수 ${buyCount}건)`;
     }
   }
 
