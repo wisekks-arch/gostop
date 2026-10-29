@@ -285,46 +285,78 @@ const MapRenderer = (() => {
     });
   }
 
-  // 5. 상단 도트 매트릭스 전구 스크린 (DMD: Dot Matrix Display)
+  // 5. 상단 3단 네온 백글래스 & 대형 점수 전광판 (사진 속 SPACE MISSION & PINBALL CHAMPION)
   function renderDMDDisplay(gameState) {
     ctx.save();
 
-    // DMD 전광판 케이스 프레임 (상단 중앙)
-    const dmdX = 55;
-    const dmdY = 16;
-    const dmdW = 270;
-    const dmdH = 46;
+    // 1) 좌측 윙: SPACE MISSION 네온 박스
+    const wingW = 95;
+    const wingH = 46;
+    ctx.fillStyle = "#080c1f";
+    ctx.strokeStyle = "#00f0ff";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#00f0ff";
+    ctx.shadowBlur = 8;
+    ctx.strokeRect(6, 12, wingW, wingH);
+    ctx.fillRect(6, 12, wingW, wingH);
 
-    ctx.fillStyle = "#0a0604";
-    ctx.strokeStyle = "#443022";
-    ctx.lineWidth = 3;
+    ctx.fillStyle = "#ffeb3b";
+    ctx.font = "900 9.5px sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "#ffeb3b";
+    ctx.shadowBlur = 6;
+    ctx.fillText("🚀 SPACE", 6 + wingW / 2, 28);
+    ctx.fillStyle = "#00f0ff";
+    ctx.fillText("MISSION", 6 + wingW / 2, 44);
+
+    // 2) 중앙: 골드/오렌지빛 대형 디지털 전광판
+    const dmdX = 108;
+    const dmdY = 8;
+    const dmdW = 164;
+    const dmdH = 54;
+
+    ctx.fillStyle = "#060402";
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 2.5;
+    ctx.shadowColor = "#f59e0b";
+    ctx.shadowBlur = 12;
     ctx.strokeRect(dmdX, dmdY, dmdW, dmdH);
     ctx.fillRect(dmdX, dmdY, dmdW, dmdH);
 
-    // 내부 전구 도트 그리드 배경
-    ctx.fillStyle = "rgba(35, 18, 5, 0.7)";
-    ctx.fillRect(dmdX + 2, dmdY + 2, dmdW - 4, dmdH - 4);
-
-    // 오렌지빛 도트 전구 LED 텍스트 연출
+    // 골드빛 도트 LED 점수
+    ctx.fillStyle = "#ffaa00";
     ctx.shadowColor = "#ff7700";
     ctx.shadowBlur = 10;
-    ctx.fillStyle = "#ffaa00";
-    ctx.font = "900 15px monospace";
+    ctx.font = "900 17px monospace";
     ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-
     const scoreStr = gameState.score.toLocaleString();
-    const comboText = gameState.combo > 1 ? ` · COMBO x${gameState.combo}` : "";
-    const displayText = `★ ${scoreStr} PTS${comboText} ★`;
+    ctx.fillText(scoreStr, dmdX + dmdW / 2, dmdY + 24);
 
-    ctx.fillText(displayText, dmdX + dmdW / 2, dmdY + 18);
-
-    // 하단 보조 텍스트 ("AUTO FIRE", "JACKPOT READY", "BONUS x2")
+    // 하단 라벨 (BALL / FREE PLAY)
     ctx.fillStyle = "#ff5500";
-    ctx.font = "800 10px monospace";
+    ctx.font = "800 8.5px monospace";
+    ctx.shadowBlur = 4;
+    const ballText = `BALL ${Math.max(1, 4 - gameState.ballsLeft)}   FREE PLAY`;
+    ctx.fillText(ballText, dmdX + dmdW / 2, dmdY + 44);
+
+    // 3) 우측 윙: PINBALL CHAMPION 네온 박스
+    const rightWingX = V_WIDTH - wingW - 6;
+    ctx.fillStyle = "#080c1f";
+    ctx.strokeStyle = "#f59e0b";
+    ctx.lineWidth = 2;
+    ctx.shadowColor = "#ffeb3b";
+    ctx.shadowBlur = 8;
+    ctx.strokeRect(rightWingX, 12, wingW, wingH);
+    ctx.fillRect(rightWingX, 12, wingW, wingH);
+
+    ctx.fillStyle = "#ffeb3b";
+    ctx.font = "900 9.5px sans-serif";
+    ctx.textAlign = "center";
+    ctx.shadowColor = "#ffeb3b";
     ctx.shadowBlur = 6;
-    const subText = gameState.shieldActive ? "▶ SHIELD ACTIVE ◀" : (gameState.combo > 2 ? "⚡ SUPER COMBO ACTIVE ⚡" : "★ PINBALL RUSH LAS VEGAS ★");
-    ctx.fillText(subText, dmdX + dmdW / 2, dmdY + 34);
+    ctx.fillText("🏆 PINBALL", rightWingX + wingW / 2, 28);
+    ctx.fillStyle = "#ff0077";
+    ctx.fillText("CHAMPION", rightWingX + wingW / 2, 44);
 
     ctx.restore();
   }
