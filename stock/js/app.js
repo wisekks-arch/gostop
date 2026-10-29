@@ -33,6 +33,7 @@ document.addEventListener("DOMContentLoaded", () => {
     initExcelImporter();
     initKiwoomApiConfig();
     initSyncRealPricesButton();
+    initConfigGuideModal();
     updateHeaderAssets();
 
     // 차트 초기화
@@ -1330,6 +1331,71 @@ document.addEventListener("DOMContentLoaded", () => {
     RebalancingEngine.saveConfig(newCfg);
     renderRebalancingView();
     showToast("리밸런싱 기술적 지표 & 매매 전략 설정이 성공적으로 저장되었습니다!", "toast-success");
+  }
+
+  // [신규 기능] 기술적 지표 & 매매 전략 파라미터 설정 가이드 모달 제어
+  function initConfigGuideModal() {
+    const btnOpen = document.getElementById("btnOpenConfigGuideModal");
+    const modal = document.getElementById("modalConfigGuide");
+    const btnClose = document.getElementById("btnCloseConfigGuideModal");
+    const btnCloseBottom = document.getElementById("btnCloseConfigGuideBottom");
+    const btnApplySafe = document.getElementById("btnApplySafePreset");
+    const btnApplyAggressive = document.getElementById("btnApplyAggressivePreset");
+
+    if (!modal) return;
+
+    const openModal = () => modal.classList.add("active");
+    const closeModal = () => modal.classList.remove("active");
+
+    if (btnOpen) btnOpen.addEventListener("click", openModal);
+    if (btnClose) btnClose.addEventListener("click", closeModal);
+    if (btnCloseBottom) btnCloseBottom.addEventListener("click", closeModal);
+
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeModal();
+    });
+
+    // 🛡️ 안정형 프리셋 자동 세팅
+    if (btnApplySafe) {
+      btnApplySafe.addEventListener("click", () => {
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        setVal("cfgRsiOverbought", 70);
+        setVal("cfgRsiOversold", 30);
+        setVal("cfgRsiPeriod", 14);
+        setVal("cfgMaShort", 10);
+        setVal("cfgMaMid", 20);
+        setVal("cfgMaLong", 60);
+        setVal("cfgProfitTarget", 20.0);
+        setVal("cfgProfitSellRatio", 30);
+        setVal("cfgStopLoss", -10.0);
+        setVal("cfgStopLossRatio", 50);
+        setVal("cfgMaxWeight", 20.0);
+        setVal("cfgCashBuffer", 15);
+        closeModal();
+        showToast("🛡️ 안정형 프리셋이 설정창에 자동 입력되었습니다. '설정 저장 & 즉시 적용'을 눌러 반영하세요.", "toast-success");
+      });
+    }
+
+    // ⚡ 공격형 프리셋 자동 세팅
+    if (btnApplyAggressive) {
+      btnApplyAggressive.addEventListener("click", () => {
+        const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.value = val; };
+        setVal("cfgRsiOverbought", 65);
+        setVal("cfgRsiOversold", 35);
+        setVal("cfgRsiPeriod", 9);
+        setVal("cfgMaShort", 3);
+        setVal("cfgMaMid", 5);
+        setVal("cfgMaLong", 20);
+        setVal("cfgProfitTarget", 10.0);
+        setVal("cfgProfitSellRatio", 50);
+        setVal("cfgStopLoss", -5.0);
+        setVal("cfgStopLossRatio", 100);
+        setVal("cfgMaxWeight", 35.0);
+        setVal("cfgCashBuffer", 10);
+        closeModal();
+        showToast("⚡ 공격형 프리셋이 설정창에 자동 입력되었습니다. '설정 저장 & 즉시 적용'을 눌러 반영하세요.", "toast-success");
+      });
+    }
   }
 
   function renderPortfolioRebalance() {

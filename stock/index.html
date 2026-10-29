@@ -553,6 +553,10 @@
             </p>
           </div>
           <div style="display: flex; gap: 0.6rem; align-items: center; flex-wrap: wrap;">
+            <button id="btnOpenConfigGuideModal" type="button"
+              style="background: rgba(88, 166, 255, 0.15); border: 1px solid var(--accent-blue); color: var(--accent-blue); padding: 0.55rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
+              📖 기술적 지표 & 매매 전략 파라미터 설정 가이드
+            </button>
             <button id="btnReturnToRebalance" type="button"
               style="background: var(--bg-tertiary); border: 1px solid var(--border-color); color: var(--text-primary); padding: 0.55rem 1rem; border-radius: 6px; font-size: 0.85rem; font-weight: 700; cursor: pointer;">
               ⚖️ 리밸런싱 전략실로 이동
@@ -879,6 +883,212 @@
               저장</button>
           </div>
         </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 모달 4: 기술적 지표 & 매매 전략 파라미터 설정 가이드 모달 -->
+  <div id="modalConfigGuide" class="modal-overlay">
+    <div class="modal-content" style="max-width: 740px; max-height: 85vh; overflow-y: auto; padding: 1.5rem;">
+      <div class="modal-header" style="border-bottom: 1px solid var(--border-color); padding-bottom: 0.75rem; margin-bottom: 1rem;">
+        <h3 style="font-size: 1.25rem; font-weight: 800; display: flex; align-items: center; gap: 0.4rem;">
+          📖 기술적 지표 & 매매 전략 파라미터 설정 가이드
+        </h3>
+        <button id="btnCloseConfigGuideModal" class="modal-close-btn">&times;</button>
+      </div>
+
+      <div style="display: flex; flex-direction: column; gap: 1.25rem; font-size: 0.9rem; line-height: 1.6; color: var(--text-primary);">
+        
+        <!-- 섹션 1: RSI 기술적 지표 설정 -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.1rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--accent-blue); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            📈 1. RSI 기술적 지표 설정
+          </h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            RSI(상대강도지수)는 가격의 상승 압력과 하락 압력 간의 상대적 강도를 나타내는 대표적인 모멘텀/과매수·과매도 지표입니다.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>과매수 (익절 검토) 기준선 (pt)</strong> — <span style="color: var(--up-red); font-weight: 700;">기본/표준값: 70 (화면 예시: 66)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 주가가 단기 급등하여 매수세가 과열된 상태입니다. 이 수치를 넘어서면 분할 매도로 차익을 실현하는 신호로 활용합니다.<br>
+                • <strong>설정 가이드:</strong><br>
+                &nbsp;&nbsp;- <em>보수적 매매:</em> <strong>70~75</strong> (추세가 강할 때 너무 일찍 파는 것을 방지)<br>
+                &nbsp;&nbsp;- <em>적극적/단기 매매:</em> <strong>65~68</strong> (조금만 과열돼도 기민하게 수익 실현)
+              </span>
+            </div>
+
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>과매도 (추가매수 검토) 기준선 (pt)</strong> — <span style="color: var(--down-blue); font-weight: 700;">기본/표준값: 30 (화면 예시: 32)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 단기 투매나 급락으로 인해 가격이 침체된 구간입니다. 저가 분할 매수 타점을 포착할 때 사용합니다.<br>
+                • <strong>설정 가이드:</strong><br>
+                &nbsp;&nbsp;- <em>강한 상승장:</em> <strong>35~40</strong> (상승장에서는 30까지 잘 내려오지 않으므로 기준 상향)<br>
+                &nbsp;&nbsp;- <em>일반/하락장:</em> <strong>25~30</strong> (충분히 바닥을 다질 때까지 대기)
+              </span>
+            </div>
+
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>RSI 계산 주기 (영업일)</strong> — <span style="font-weight: 700;">표준값: 14일</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>설정 가이드:</strong> 웰스 와일더(J. Welles Wilder)가 고안한 표준 주기 14일을 유지하는 것이 가장 일반적이고 신뢰도가 높습니다. 주기를 줄이면(9일) 신호가 민감해져 잦은 매매가 발생하고, 늘리면(21일) 신호는 둔감해지나 큰 추세 위주로 걸러집니다.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 섹션 2: 이동평균선 (MA) 주기 설정 -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.1rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--accent-purple); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            📉 2. 이동평균선 (MA) 주기 설정
+          </h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            주가의 단기·중기·장기 평균 가격 흐름을 파악하여 정배열/역배열 및 지지·저항선을 판별합니다.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>단기 이동평균선</strong> — <span style="font-weight: 700; color: var(--accent-blue);">추천값: 5일선 (또는 스윙 시 10일선)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 1주일간의 매매 심리와 단기 방향성을 반영합니다. 단기 급등주나 빠른 모멘텀 매매의 가늠자가 됩니다.
+              </span>
+            </div>
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>중기 이동평균선</strong> — <span style="font-weight: 700; color: var(--accent-green);">추천값: 20일선</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 흔히 생명선 또는 수급선으로 불리는 1개월 기준선입니다. 상승 추세 종목은 보통 20일선 부근에서 눌림목 지지를 형성합니다.
+              </span>
+            </div>
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>장기 이동평균선</strong> — <span style="font-weight: 700; color: var(--accent-gold);">추천값: 60일선 (또는 대세 추세 판단 시 120일 / 200일선)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 분기 실적 및 중장기 수급 추세선입니다. 60일선 위에 주가가 위치해 있어야 중장기 상승 추세로 분류합니다.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 섹션 3: 수익률 기반 익절 & 손절 규칙 -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.1rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--up-red); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            🎯 3. 수익률 기반 익절 & 손절 규칙
+          </h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            기계적이고 규율 있는 자금 관리를 통해 '수익은 길게, 손실은 짧게(손익비 관리)' 유지하기 위한 규칙입니다.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>목표 익절 수익률 (%) & 분할 차익 실현 비율 (%)</strong> — <span style="font-weight: 700;">설정 예시: +15% 도달 시 30% 분할 매도</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>전략 팁:</strong> 보유 물량 전체를 전량 매도하기보다는, 1차 목표치(예: +10% ~ +15%)에서 30~50%를 먼저 덜어내 수익을 확정 짓습니다. 남은 물량은 추세(예: 20일선 이탈 전까지)를 유지하며 추가 상승 수익을 극대화(Trailing Stop)하는 데 유리합니다.
+              </span>
+            </div>
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>리스크 방어 손절 제한선 (%) & 손절 비중 축소 비율 (%)</strong> — <span style="font-weight: 700; color: var(--down-blue);">설정 예시: -8% 도달 시 50% 손절 매도</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>전략 팁:</strong> 손익비(Profit-to-Loss Ratio) 관점에서 익절 목표가 +15%라면 손절선은 -7% ~ -8% 수준(손익비 약 2:1)으로 설계하는 것이 정석입니다. 비중을 50% 줄여두면 추가 급락 시 계좌 전체가 입는 충격을 절반으로 방어하면서, 혹시 모를 기술적 반등 시 나머지 물량으로 탈출 기회를 모색할 수 있습니다.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 섹션 4: 포트폴리오 편중도 & 현금 버퍼 -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.1rem;">
+          <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--accent-gold); margin-bottom: 0.5rem; display: flex; align-items: center; gap: 0.4rem;">
+            ⚖️ 4. 포트폴리오 편중도 & 현금 버퍼
+          </h4>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 0.75rem;">
+            개별 종목 위험(비체계적 위험)을 제어하고, 시장 급락 시 저가 매수 여력을 확보하는 자산배분 규칙입니다.
+          </p>
+          <div style="display: flex; flex-direction: column; gap: 0.6rem;">
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>단일 종목 최대 허용 비중 (%)</strong> — <span style="font-weight: 700;">추천값: 20% ~ 30% (화면 예시: 30%)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 특정 1개 종목이 급등하여 포트폴리오의 30%를 초과하게 되면, 시스템이 쏠림 경고를 띄우고 초과분을 분할 매도하여 다른 자산으로 분산하도록 유도합니다.
+              </span>
+            </div>
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>목표 현금 유동성 비중 (%)</strong> — <span style="font-weight: 700;">추천값: 10% ~ 20% (화면 예시: 10%)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 항상 전체 자산의 일정 비율을 예수금/현금성 자산(CMA, 파킹통장 등)으로 유지합니다. 시장 전체가 급락할 때 패닉 셀을 피하고 우량주를 저가 매수할 수 있는 핵심 안전판 역할을 합니다.
+              </span>
+            </div>
+            <div style="background: var(--bg-tertiary); padding: 0.65rem 0.85rem; border-radius: 6px;">
+              <strong>추가 매수(눌림목) 진입 하락폭 (%)</strong> — <span style="font-weight: 700;">추천값: -5% ~ -10% (화면 예시: -5%)</span><br>
+              <span style="font-size: 0.82rem; color: var(--text-secondary);">
+                • <strong>의미:</strong> 직전 고점 또는 평단가 대비 단기 -5% 조정을 받을 때, 지지선 확인 후 현금 버퍼를 활용해 분할 매수하는 진입 기준입니다.
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- 섹션 5: 전략 성향별 추천 세팅 프리셋 요약 표 -->
+        <div style="background: var(--bg-secondary); border: 1px solid var(--border-color); border-radius: var(--radius-sm); padding: 1.1rem;">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem; margin-bottom: 0.75rem;">
+            <h4 style="font-size: 1.05rem; font-weight: 800; color: var(--accent-green); margin: 0; display: flex; align-items: center; gap: 0.4rem;">
+              📊 전략 성향별 추천 세팅 프리셋 요약
+            </h4>
+            <div style="display: flex; gap: 0.4rem;">
+              <button id="btnApplySafePreset" type="button" style="background: var(--accent-green); color: #fff; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                🛡️ 안정형 바로 적용
+              </button>
+              <button id="btnApplyAggressivePreset" type="button" style="background: var(--up-red); color: #fff; border: none; padding: 0.35rem 0.75rem; border-radius: 4px; font-size: 0.78rem; font-weight: 700; cursor: pointer;">
+                ⚡ 공격형 바로 적용
+              </button>
+            </div>
+          </div>
+
+          <div style="overflow-x: auto;">
+            <table class="data-table" style="width: 100%; min-width: 500px; font-size: 0.85rem;">
+              <thead>
+                <tr>
+                  <th class="text-left" style="width: 25%;">구분</th>
+                  <th class="text-center" style="width: 37.5%; color: var(--accent-green);">안정형 (중장기 스윙/우량주)</th>
+                  <th class="text-center" style="width: 37.5%; color: var(--up-red);">공격형 (단기 모멘텀/테마)</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td class="text-left"><strong>RSI 과매수 / 과매도</strong></td>
+                  <td class="text-center">70 이상 / 30 이하</td>
+                  <td class="text-center">65 이상 / 35 이하</td>
+                </tr>
+                <tr>
+                  <td class="text-left"><strong>이동평균선 주기</strong></td>
+                  <td class="text-center">10일 / 20일 / 60일 (또는 120일)</td>
+                  <td class="text-center">3일 / 5일 / 20일</td>
+                </tr>
+                <tr>
+                  <td class="text-left"><strong>익절 / 분할비율</strong></td>
+                  <td class="text-center">+20% 도달 시 30% 매도</td>
+                  <td class="text-center">+8~10% 도달 시 50% 매도</td>
+                </tr>
+                <tr>
+                  <td class="text-left"><strong>손절 / 손절비율</strong></td>
+                  <td class="text-center">-10% 도달 시 50% 매도</td>
+                  <td class="text-center">-5% 도달 시 전량(100%) 매도</td>
+                </tr>
+                <tr>
+                  <td class="text-left"><strong>단일종목 최대비중</strong></td>
+                  <td class="text-center">20% (최소 5종목 이상 분산)</td>
+                  <td class="text-center">30% ~ 35%</td>
+                </tr>
+                <tr>
+                  <td class="text-left"><strong>목표 현금 비중</strong></td>
+                  <td class="text-center">15% ~ 20%</td>
+                  <td class="text-center">10%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; margin-top: 1.25rem;">
+        <button id="btnCloseConfigGuideBottom" type="button"
+          style="background: var(--accent-blue); color: #fff; border: none; padding: 0.55rem 1.5rem; border-radius: 6px; font-weight: 700; cursor: pointer; font-size: 0.9rem;">
+          확인 및 닫기
+        </button>
       </div>
     </div>
   </div>
